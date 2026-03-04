@@ -16,19 +16,14 @@ Para implantar o ambiente localmente, certifique-se de que o Docker e o Docker C
 1. Construção e execução dos containers:
    docker-compose up -d --build
 
-2. Provisionamento do banco de dados (Migrations e Seed):
-   docker-compose exec api php artisan migrate --seed
+2. Provisionamento do banco de dados (Migrations):
+   docker-compose exec api php artisan migrate 
 
 ## Acesso aos Serviços
 
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8000
 - Porta do Banco de Dados: 5432
-
-## Credenciais de Acesso Inicial (Seed)
-
-- CPF: 12345678901
-- Senha: 123456
 
 ## Persistência de Dados
 

@@ -36,7 +36,9 @@ export default function UsuariosPage() {
                                 <td className="px-5 py-4 border-b text-sm font-bold text-slate-700">{user.nome}</td>
                                 <td className="px-5 py-4 border-b text-sm">{user.cpf}</td>
                                 <td className="px-5 py-4 border-b text-sm">
-                                    {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                                    {user.criado_em 
+                                    ? new Date(user.criado_em).toLocaleDateString('pt-BR') 
+                                    : 'Sem data'}
                                 </td>
                             </tr>
                         ))}

@@ -11,24 +11,37 @@ services:
       POSTGRES_PASSWORD: rA9
     ports:
       - "5432:5432"
+    volumes:
+      - ./init-db:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
 
   api:
     build:
       context: ./os-manager-api
+      dockerfile: Dockerfile
     container_name: os_api
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./os-manager-api:/var/www
+    restart: always
     depends_on:
       - db
-    command: ["./entrypoint.sh"] 
+    ports:
+      - "8000:8000"
+    environment:
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: os_manager_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: rA9
 
   front:
     build:
-      context: ./os-manager-front
+      context: ./os-manager-front # Caminho confirmado pela sua árvore
     container_name: os_front
+    restart: always
     ports:
       - "3000:3000"
     depends_on:
       - api
+
+volumes:
+  postgres_data:

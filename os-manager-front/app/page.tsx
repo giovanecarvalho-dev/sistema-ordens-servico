@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react';
 import api from './services/api';
+import ModoEscuro from './components/ModoEscuro'; 
 
 export default function ListaChamados() {
   const [ordens, setOrdens] = useState([]);
@@ -33,7 +34,6 @@ export default function ListaChamados() {
     os.id.toString().includes(busca)
   );
 
- 
   const deletarChamado = async (id: number) => {
     if (confirm("Deseja excluir este chamado permanentemente?")) {
       try {
@@ -72,21 +72,32 @@ export default function ListaChamados() {
   };
 
   return (
-    <div className="max-w-[98%] mx-auto py-10 px-4">
+    // Adicionado dark:bg-slate-900 para o fundo do tema escuro [cite: 2026-03-02]
+    <div className="max-w-[98%] mx-auto py-10 px-4 min-h-screen transition-colors duration-300 dark:bg-slate-900">
+      
       <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-black text-slate-800 tracking-tighter uppercase">Gestão de Chamados</h2>
-        <input 
-          type="text" 
-          placeholder="Filtrar por título ou ID..." 
-          className="p-2 border rounded-lg text-xs w-64 outline-none focus:ring-2 focus:ring-blue-500"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
+        {/* Título com suporte a dark mode */}
+        <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tighter uppercase">
+          Gestão de Chamados
+        </h2>
+        
+        {/* Grupo de Busca + Botão de Tema (Onde estava seu cursor) */}
+        <div className="flex items-center gap-3">
+          <input 
+            type="text" 
+            placeholder="Filtrar por título ou ID..." 
+            className="p-2 border rounded-lg text-xs w-64 outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+          <ModoEscuro /> 
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {/* Tabela com suporte a dark mode [cite: 2026-03-02] */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
         <table className="w-full text-left text-[11px]">
-          <thead className="bg-gray-50 border-b border-gray-100 text-gray-400 uppercase font-bold">
+          <thead className="bg-gray-50 dark:bg-slate-700/50 border-b border-gray-100 dark:border-slate-700 text-gray-400 dark:text-slate-400 uppercase font-bold">
             <tr>
               <th className="px-4 py-3">ID</th>
               <th className="px-4 py-3">Título</th>
@@ -97,35 +108,37 @@ export default function ListaChamados() {
               <th className="px-4 py-3">Ações</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
             {ordensFiltradas.map((os: any) => (
-              <tr key={os.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-4 font-mono text-blue-600">#{os.id}</td>
-                <td className="px-4 py-4 font-bold text-gray-800">{os.titulo}</td>
+              <tr key={os.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td className="px-4 py-4 font-mono text-blue-600 dark:text-blue-400">#{os.id}</td>
+                <td className="px-4 py-4 font-bold text-gray-800 dark:text-slate-200">{os.titulo}</td>
                 <td className="px-4 py-4">
                   <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${
-                    os.status === 'Fechado' ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'
+                    os.status === 'Fechado' 
+                      ? 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400' 
+                      : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                   }`}>
                     {os.status}
                   </span>
                 </td>
-                <td className="px-4 py-4 text-gray-500 font-medium">
-                  {os.usuario?.nome || <span className="text-red-300">Não atribuído</span>}
+                <td className="px-4 py-4 text-gray-500 dark:text-slate-400 font-medium">
+                  {os.usuario?.nome || <span className="text-red-300 dark:text-red-400/60">Não atribuído</span>}
                 </td> 
-                <td className="px-4 py-4">{os.urgencia}</td>
-                <td className="px-4 py-4">{os.prioridade}</td>
+                <td className="px-4 py-4 dark:text-slate-300">{os.urgencia}</td>
+                <td className="px-4 py-4 dark:text-slate-300">{os.prioridade}</td>
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
                     <button 
                       onClick={() => abrirModalEdicao(os)} 
-                      className="text-blue-600 font-black hover:underline"
+                      className="text-blue-600 dark:text-blue-400 font-black hover:underline"
                     >
                       EDITAR
                     </button>
-                    <span className="text-gray-300">|</span>
+                    <span className="text-gray-300 dark:text-slate-600">|</span>
                     <button 
                       onClick={() => deletarChamado(os.id)} 
-                      className="text-red-500 font-black hover:underline"
+                      className="text-red-500 dark:text-red-400 font-black hover:underline"
                     >
                       EXCLUIR
                     </button>
@@ -136,23 +149,27 @@ export default function ListaChamados() {
           </tbody>
         </table>
         {ordensFiltradas.length === 0 && (
-          <div className="p-10 text-center text-gray-400 font-medium">Nenhum chamado encontrado.</div>
+          <div className="p-10 text-center text-gray-400 dark:text-slate-500 font-medium">
+            Nenhum chamado encontrado.
+          </div>
         )}
       </div>
 
-      {/* MODAL DE EDIÇÃO */}
+      {/* MODAL DE EDIÇÃO COM DARK MODE */}
       {chamadoSelecionado && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-xl rounded-xl shadow-2xl p-6">
-            <h3 className="text-lg font-black mb-6 border-b pb-4 text-slate-800">Editar Chamado #{chamadoSelecionado.id}</h3>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-xl rounded-xl shadow-2xl p-6 border dark:border-slate-700">
+            <h3 className="text-lg font-black mb-6 border-b dark:border-slate-700 pb-4 text-slate-800 dark:text-slate-100">
+              Editar Chamado #{chamadoSelecionado.id}
+            </h3>
             <form onSubmit={salvarEdicao} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Técnico Responsável</label>
+                  <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase">Técnico Responsável</label>
                   <select 
                     value={tecnicoId} 
                     onChange={(e) => setTecnicoId(e.target.value)} 
-                    className="w-full p-2 bg-gray-50 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full p-2 bg-gray-50 dark:bg-slate-700 border dark:border-slate-600 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                   >
                     <option value="">Selecione...</option>
                     {tecnicos.map((t: any) => (
@@ -161,8 +178,12 @@ export default function ListaChamados() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase">Status</label>
-                  <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full p-2 bg-gray-50 border rounded text-sm">
+                  <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase">Status</label>
+                  <select 
+                    value={status} 
+                    onChange={(e) => setStatus(e.target.value)} 
+                    className="w-full p-2 bg-gray-50 dark:bg-slate-700 border dark:border-slate-600 rounded text-sm dark:text-white"
+                  >
                     <option>Novo</option>
                     <option>Em andamento</option>
                     <option>Fechado</option>
@@ -170,17 +191,28 @@ export default function ListaChamados() {
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Solução Aplicada</label>
+                <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase">Solução Aplicada</label>
                 <textarea 
                   value={solucao} 
                   onChange={(e) => setSolucao(e.target.value)} 
-                  className="w-full p-3 bg-gray-50 border rounded text-sm h-24 outline-none focus:ring-2 focus:ring-blue-500" 
+                  className="w-full p-3 bg-gray-50 dark:bg-slate-700 border dark:border-slate-600 rounded text-sm h-24 outline-none focus:ring-2 focus:ring-blue-500 dark:text-white" 
                   placeholder="Descreva o que foi feito..."
                 />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <button type="button" onClick={() => setChamadoSelecionado(null)} className="text-xs font-bold text-gray-400 hover:text-gray-600">CANCELAR</button>
-                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-8 rounded-lg text-xs shadow-lg transition-all">SALVAR ALTERAÇÕES</button>
+                <button 
+                  type="button" 
+                  onClick={() => setChamadoSelecionado(null)} 
+                  className="text-xs font-bold text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
+                >
+                  CANCELAR
+                </button>
+                <button 
+                  type="submit" 
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-8 rounded-lg text-xs shadow-lg transition-all"
+                >
+                  SALVAR ALTERAÇÕES
+                </button>
               </div>
             </form>
           </div>

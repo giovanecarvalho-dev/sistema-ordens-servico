@@ -20,7 +20,7 @@
                 "operationId": "e9954d9a37630cdf929ae616b77d4103",
                 "responses": {
                     "200": {
-                        "description": "Ordens retornadas com sucesso"
+                        "description": "Lista recuperada com sucesso"
                     }
                 }
             },
@@ -44,19 +44,28 @@
                                 ],
                                 "properties": {
                                     "titulo": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": "Troca de toner"
                                     },
                                     "descricao": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": "Impressora do RH sem tinta"
                                     },
                                     "usuario_id": {
-                                        "type": "integer"
+                                        "type": "integer",
+                                        "example": 1
                                     },
                                     "prioridade": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": "Média"
                                     },
                                     "urgencia": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": "Alta"
+                                    },
+                                    "localizacao": {
+                                        "type": "string",
+                                        "example": "Bloco A - Sala 10"
                                     }
                                 },
                                 "type": "object"
@@ -68,8 +77,8 @@
                     "201": {
                         "description": "Ordem criada com sucesso"
                     },
-                    "400": {
-                        "description": "Erro ao criar ordem"
+                    "422": {
+                        "description": "Erro de validação"
                     }
                 }
             }
@@ -164,6 +173,29 @@
                 ],
                 "summary": "Cria um novo usuário",
                 "operationId": "4e9dbcbdaaaf9faab196a82d5cbaea23",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nome": {
+                                        "type": "string"
+                                    },
+                                    "cpf": {
+                                        "type": "string"
+                                    },
+                                    "senha": {
+                                        "type": "string"
+                                    },
+                                    "cargo": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
                         "description": "Usuário criado"
@@ -181,6 +213,25 @@
                 ],
                 "summary": "Login do usuário",
                 "operationId": "97e61fbe879f3468ebf503966c2d3482",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "cpf": {
+                                        "type": "string",
+                                        "example": "12312312312"
+                                    },
+                                    "senha": {
+                                        "type": "string",
+                                        "example": "1234"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "Login realizado"

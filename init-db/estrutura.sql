@@ -1,0 +1,24 @@
+-- Criação automática das tabelas em português
+CREATE TABLE IF NOT EXISTS usuarios (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(80) NOT NULL, --segundo o ibge, o nome completo tem em média 80 caracteres
+    cpf VARCHAR(11) UNIQUE NOT NULL,
+    senha VARCHAR(255) NOT NULL,
+    cargo VARCHAR(30) DEFAULT 'Tecnico',
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ordem_servicos (
+    id SERIAL PRIMARY KEY,
+    titulo VARCHAR(100) NOT NULL,
+    descricao TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'Aberto',
+    urgencia VARCHAR(15),
+    prioridade VARCHAR(15),
+    localizacao VARCHAR(120),
+    solucao TEXT,
+    usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

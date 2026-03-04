@@ -25,6 +25,11 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    // Avisa o Laravel que os nomes das colunas de data mudaram no DBeaver
+    const CREATED_AT = 'criado_em';
+    const UPDATED_AT = 'atualizado_em';
+
+    // O Laravel procura 'password' por padrão, aqui dizemos para usar 'senha'
     public function getAuthPassword()
     {
         return $this->senha;

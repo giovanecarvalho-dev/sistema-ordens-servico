@@ -11,6 +11,10 @@ class OrdemServico extends Model
 
     protected $table = 'ordem_servicos';
 
+    // Mapeamento dos timestamps para português
+    const CREATED_AT = 'criado_em';
+    const UPDATED_AT = 'atualizado_em';
+
     protected $fillable = [
         'titulo', 
         'descricao', 

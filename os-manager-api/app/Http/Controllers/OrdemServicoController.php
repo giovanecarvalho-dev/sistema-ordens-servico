@@ -6,27 +6,20 @@ use App\Models\OrdemServico;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
-#[OA\Tag(
-    name: "OrdensServico",
-    description: "Endpoints para gerenciamento de ordens de serviço"
-)]
+#[OA\Tag(name: "OrdensServico", description: "Endpoints para gerenciamento de ordens de serviço")]
 class OrdemServicoController extends Controller
 {
     #[OA\Get(
         path: "/api/ordens",
         tags: ["OrdensServico"],
         summary: "Lista todas as ordens de serviço",
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: "Ordens retornadas com sucesso"
-            )
-        ]
+        responses: [new OA\Response(response: 200, description: "Lista recuperada com sucesso")]
     )]
     public function index()
     {
+        // Ordenando pela nova coluna em português que está no seu DBeaver
         return OrdemServico::with('usuario')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('criado_em', 'desc')
             ->get();
     }
 
@@ -39,17 +32,18 @@ class OrdemServicoController extends Controller
             content: new OA\JsonContent(
                 required: ["titulo","descricao","usuario_id","prioridade","urgencia"],
                 properties: [
-                    new OA\Property(property: "titulo", type: "string"),
-                    new OA\Property(property: "descricao", type: "string"),
-                    new OA\Property(property: "usuario_id", type: "integer"),
-                    new OA\Property(property: "prioridade", type: "string"),
-                    new OA\Property(property: "urgencia", type: "string"),
+                    new OA\Property(property: "titulo", type: "string", example: "Troca de toner"),
+                    new OA\Property(property: "descricao", type: "string", example: "Impressora do RH sem tinta"),
+                    new OA\Property(property: "usuario_id", type: "integer", example: 1),
+                    new OA\Property(property: "prioridade", type: "string", example: "Média"),
+                    new OA\Property(property: "urgencia", type: "string", example: "Alta"),
+                    new OA\Property(property: "localizacao", type: "string", example: "Bloco A - Sala 10")
                 ]
             )
         ),
         responses: [
             new OA\Response(response: 201, description: "Ordem criada com sucesso"),
-            new OA\Response(response: 400, description: "Erro ao criar ordem")
+            new OA\Response(response: 422, description: "Erro de validação")
         ]
     )]
     public function store(Request $request)
@@ -71,14 +65,7 @@ class OrdemServicoController extends Controller
         path: "/api/ordens/{id}",
         tags: ["OrdensServico"],
         summary: "Mostra detalhes de uma ordem",
-        parameters: [
-            new OA\Parameter(
-                name: "id",
-                in: "path",
-                required: true,
-                schema: new OA\Schema(type: "integer")
-            )
-        ],
+        parameters: [new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))],
         responses: [
             new OA\Response(response: 200, description: "Ordem encontrada"),
             new OA\Response(response: 404, description: "Ordem não encontrada")
@@ -93,17 +80,8 @@ class OrdemServicoController extends Controller
         path: "/api/ordens/{id}",
         tags: ["OrdensServico"],
         summary: "Atualiza uma ordem",
-        parameters: [
-            new OA\Parameter(
-                name: "id",
-                in: "path",
-                required: true,
-                schema: new OA\Schema(type: "integer")
-            )
-        ],
-        responses: [
-            new OA\Response(response: 200, description: "Ordem atualizada")
-        ]
+        parameters: [new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))],
+        responses: [new OA\Response(response: 200, description: "Ordem atualizada")]
     )]
     public function update(Request $request, $id)
     {
@@ -117,22 +95,12 @@ class OrdemServicoController extends Controller
         path: "/api/ordens/{id}",
         tags: ["OrdensServico"],
         summary: "Remove uma ordem",
-        parameters: [
-            new OA\Parameter(
-                name: "id",
-                in: "path",
-                required: true,
-                schema: new OA\Schema(type: "integer")
-            )
-        ],
-        responses: [
-            new OA\Response(response: 200, description: "Ordem removida")
-        ]
+        parameters: [new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))],
+        responses: [new OA\Response(response: 200, description: "Ordem removida")]
     )]
     public function destroy($id)
     {
         OrdemServico::destroy($id);
-
         return response()->json(['message' => 'Excluído com sucesso'], 200);
     }
 }
