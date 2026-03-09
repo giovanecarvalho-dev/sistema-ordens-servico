@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed h-full shadow-sm">
             <div className="p-6">
               <h1 className="text-xl font-black tracking-tighter text-blue-600 dark:text-blue-400 uppercase">
-                Sistema OS Local
+                Central de Suporte Técnico
               </h1>
             </div>
 

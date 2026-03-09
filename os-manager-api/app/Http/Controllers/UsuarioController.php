@@ -86,7 +86,6 @@ class UsuarioController extends Controller
         }
 
         // RETORNO CRUCIAL: Envolvemos o usuário em uma chave 'user'
-        // Isso impede o erro de "undefined is not valid JSON" no seu Front-end [cite: 2026-02-11]
         return response()->json([
             'user' => $usuario
         ]);
