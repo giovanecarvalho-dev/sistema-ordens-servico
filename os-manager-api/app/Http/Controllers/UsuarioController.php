@@ -28,10 +28,11 @@ class UsuarioController extends Controller
         requestBody: new OA\RequestBody(
             content: new OA\JsonContent(
                 properties: [
-                    new OA\Property(property: "nome", type: "string"),
-                    new OA\Property(property: "cpf", type: "string"),
-                    new OA\Property(property: "senha", type: "string"),
-                    new OA\Property(property: "cargo", type: "string")
+                    new OA\Property(property: "nome", type: "string", example: "João Silva"),
+                    new OA\Property(property: "cpf", type: "string", example: "12345678901"),
+                    new OA\Property(property: "email", type: "string", example: "joao@email.com"),
+                    new OA\Property(property: "senha", type: "string", example: "1234"),
+                    new OA\Property(property: "cargo", type: "string", example: "Usuario", enum: ["Usuario", "Tecnico", "Admin"])
                 ]
             )
         ),
@@ -43,16 +44,19 @@ class UsuarioController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nome'  => 'required|string|max:255',
-            'cpf'   => 'required|string|unique:usuarios,cpf',
+            'nome'  => 'required|string|max:80',
+            'cpf'   => 'required|string|size:11|unique:usuarios,cpf',
+            'email' => 'required|email|unique:usuarios,email',
             'senha' => 'required|string|min:4',
+            'cargo' => 'sometimes|string|in:Usuario,Tecnico,Admin',
         ]);
 
         $usuario = User::create([
             'nome'  => $request->nome,
             'cpf'   => $request->cpf,
+            'email' => $request->email,
             'senha' => Hash::make($request->senha),
-            'cargo' => $request->cargo ?? 'Usuario',
+            'cargo' => 'Usuario',
         ]);
 
         return response()->json($usuario, 201);
@@ -65,7 +69,7 @@ class UsuarioController extends Controller
         requestBody: new OA\RequestBody(
             content: new OA\JsonContent(
                 properties: [
-                    new OA\Property(property: "cpf", type: "string", example: "12312312312"),
+                    new OA\Property(property: "cpf", type: "string", example: "12345678901"),
                     new OA\Property(property: "senha", type: "string", example: "1234")
                 ]
             )
@@ -77,17 +81,67 @@ class UsuarioController extends Controller
     )]
     public function login(Request $request)
     {
-        // Busca na tabela 'usuarios' pela coluna 'cpf'
         $usuario = User::where('cpf', $request->cpf)->first();
 
-        // Verifica a senha usando a coluna 'senha' do banco (mapeada no Model)
         if (!$usuario || !Hash::check($request->senha, $usuario->senha)) {
             return response()->json(['message' => 'Credenciais inválidas'], 401);
         }
 
-        // RETORNO CRUCIAL: Envolvemos o usuário em uma chave 'user'
         return response()->json([
             'user' => $usuario
         ]);
+    }
+
+    #[OA\Put(
+        path: "/api/usuarios/{id}",
+        tags: ["Usuarios"],
+        summary: "Atualiza o cargo de um usuário",
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
+        ],
+        requestBody: new OA\RequestBody(
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: "cargo", type: "string", example: "Tecnico", enum: ["Usuario", "Tecnico", "Admin"])
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: "Cargo atualizado"),
+            new OA\Response(response: 404, description: "Usuário não encontrado"),
+            new OA\Response(response: 422, description: "Erro de validação")
+        ]
+    )]
+    public function update(Request $request, $id)
+    {
+        $usuario = User::findOrFail($id);
+
+        $request->validate([
+            'cargo' => 'required|string|in:Usuario,Tecnico,Admin',
+        ]);
+
+        $usuario->cargo = $request->cargo;
+        $usuario->save();
+
+        return response()->json($usuario);
+    }
+
+    #[OA\Delete(
+        path: "/api/usuarios/{id}",
+        tags: ["Usuarios"],
+        summary: "Remove um usuário",
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Usuário removido"),
+            new OA\Response(response: 404, description: "Usuário não encontrado")
+        ]
+    )]
+    public function destroy($id)
+    {
+        $usuario = User::findOrFail($id);
+        $usuario->delete();
+        return response()->json(['message' => 'Usuário removido com sucesso']);
     }
 }

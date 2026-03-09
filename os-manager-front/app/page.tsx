@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react';
 import api from './services/api';
-import ModoEscuro from './components/ModoEscuro'; 
 
 export default function ListaChamados() {
   const [ordens, setOrdens] = useState([]);
@@ -98,7 +97,7 @@ export default function ListaChamados() {
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
-          <ModoEscuro /> 
+        
         </div>
       </div>
 
