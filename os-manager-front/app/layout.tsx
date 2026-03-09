@@ -1,78 +1,51 @@
-'use client'
-import "./globals.css";
-import Link from "next/link";
-import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import './globals.css';
+import { Inter } from 'next/font/google';
+import Link from 'next/link';
+import { LayoutDashboard, ClipboardList, UserPlus, Users, BarChart3, Settings } from 'lucide-react';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
-
-  
-  useEffect(() => {
-    const savedUser = localStorage.getItem('usuario');
-    if (savedUser) {
-      setUsuarioLogado(JSON.parse(savedUser));
-    }
-  }, []);
-
-  const menuItems = [
-    { name: 'Chamados', href: '/' },
-    { name: 'Criar chamado', href: '/novo' },
-    { name: 'Usuários', href: '/usuarios' },
-    { name: 'Estatísticas', href: '/estatisticas' },
-  ];
-
-  if (pathname === '/login') {
-    return (
-      <html lang="pt-br">
-        <body className="antialiased bg-gray-50 flex items-center justify-center min-h-screen">
-          {children}
-        </body>
-      </html>
-    );
-  }
-
   return (
-    <html lang="pt-br">
-      <body className="antialiased">
-        <div className="flex h-screen bg-gray-50 text-gray-900">
-          <aside className="w-64 bg-[#2c3e50] text-white flex flex-col fixed h-full shadow-2xl">
-            <div className="p-6 border-b border-slate-700">
-              <h1 className="text-lg font-black tracking-tight uppercase">Central de Chamados</h1>
-              <p className="text-[9px] text-slate-400 uppercase tracking-widest">Suporte Técnico</p>
+    <html lang="pt-br" suppressHydrationWarning>
+      <body className={`${inter.className} bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300`}>
+        <div className="flex min-h-screen">
+          
+          {/* SIDEBAR COMPLETA */}
+          <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed h-full shadow-sm">
+            <div className="p-6">
+              <h1 className="text-xl font-black tracking-tighter text-blue-600 dark:text-blue-400 uppercase">
+                Sistema OS Local
+              </h1>
             </div>
-            
-            <nav className="flex-1 p-4 space-y-1">
-              <p className="text-slate-500 text-[10px] font-bold uppercase mb-4 px-2 tracking-widest">Assistência</p>
-              {menuItems.map((item) => (
-                <Link 
-                  key={item.name}
-                  href={item.href} 
-                  className={`flex items-center gap-3 w-full p-3 rounded-lg transition-all text-sm ${
-                    pathname === item.href ? 'bg-blue-600 font-bold text-white' : 'text-slate-400 hover:bg-slate-700'
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
+
+            <nav className="flex-1 px-4 space-y-1">
+              <Link href="/" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-medium text-slate-600 dark:text-slate-300">
+                <LayoutDashboard size={18} /> Dashboard
+              </Link>
+              <Link href="/chamados" className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold">
+                <ClipboardList size={18} /> Chamados
+              </Link>
+              <Link href="/criar-chamado" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-medium text-slate-600 dark:text-slate-300">
+                <UserPlus size={18} /> Criar Chamado
+              </Link>
+              <Link href="/usuarios" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-medium text-slate-600 dark:text-slate-300">
+                <Users size={18} /> Usuários
+              </Link>
+              <Link href="/estatisticas" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-medium text-slate-600 dark:text-slate-300">
+                <BarChart3 size={18} /> Estatísticas
+              </Link>
             </nav>
 
-      
-            {usuarioLogado && (
-              <div className="p-4 bg-slate-800/50 border-t border-slate-700">
-                <p className="text-[9px] text-slate-500 uppercase font-bold mb-1">Logado como:</p>
-                <p className="text-sm font-bold text-blue-400">{usuarioLogado.nome}</p>
-                <p className="text-[10px] text-slate-400">{usuarioLogado.cargo}</p>
-              </div>
-            )}
-
-            <div className="p-4 border-t border-slate-700 text-[10px] text-center text-slate-500 font-mono uppercase tracking-tighter">
-              Docker Environment v1.0
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+              <Link href="/configuracoes" className="flex items-center gap-3 p-3 w-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all rounded-xl">
+                <Settings size={18} /> Configurações
+              </Link>
             </div>
           </aside>
 
-          <main className="flex-1 ml-64 overflow-y-auto">
+          {/* CONTEÚDO PRINCIPAL */}
+          <main className="flex-1 ml-64 min-h-screen">
             {children}
           </main>
         </div>

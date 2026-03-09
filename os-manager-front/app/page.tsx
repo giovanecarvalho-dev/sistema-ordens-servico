@@ -8,6 +8,8 @@ export default function ListaChamados() {
   const [busca, setBusca] = useState('');
   const [tecnicos, setTecnicos] = useState([]);
   const [chamadoSelecionado, setChamadoSelecionado] = useState<any>(null);
+  
+  // Estados para Edição (Mantendo todos os seus campos originais)
   const [tecnicoId, setTecnicoId] = useState('');
   const [status, setStatus] = useState('');
   const [urgencia, setUrgencia] = useState('');
@@ -22,26 +24,19 @@ export default function ListaChamados() {
       ]);
       setOrdens(resOrdens.data);
       setTecnicos(resTecnicos.data);
-    } catch (err) {
-      console.error("Erro ao carregar dados");
-    }
+    } catch (err) { console.error("Erro ao carregar dados"); }
   };
 
   useEffect(() => { buscarDados(); }, []);
 
   const ordensFiltradas = ordens.filter((os: any) => 
-    os.titulo.toLowerCase().includes(busca.toLowerCase()) || 
-    os.id.toString().includes(busca)
+    os.titulo.toLowerCase().includes(busca.toLowerCase()) || os.id.toString().includes(busca)
   );
 
   const deletarChamado = async (id: number) => {
     if (confirm("Deseja excluir este chamado permanentemente?")) {
-      try {
-        await api.delete(`/ordens/${id}`);
-        buscarDados(); 
-      } catch (err) {
-        alert("Erro ao excluir chamado.");
-      }
+      try { await api.delete(`/ordens/${id}`); buscarDados(); } 
+      catch (err) { alert("Erro ao excluir."); }
     }
   };
 
@@ -58,35 +53,27 @@ export default function ListaChamados() {
     e.preventDefault();
     try {
       await api.put(`/ordens/${chamadoSelecionado.id}`, {
-        status, 
-        usuario_id: tecnicoId,
-        urgencia, 
-        prioridade, 
-        solucao
+        status, usuario_id: tecnicoId, urgencia, prioridade, solucao
       });
       buscarDados();
       setChamadoSelecionado(null);
-    } catch (err) {
-      alert("Erro ao atualizar.");
-    }
+    } catch (err) { alert("Erro ao atualizar."); }
   };
 
   return (
-    // Adicionado dark:bg-slate-900 para o fundo do tema escuro [cite: 2026-03-02]
-    <div className="max-w-[98%] mx-auto py-10 px-4 min-h-screen transition-colors duration-300 dark:bg-slate-900">
-      
+    <div className="p-10 min-h-screen transition-colors duration-300 dark:bg-slate-950">
       <div className="flex justify-between items-center mb-8">
-        {/* Título com suporte a dark mode */}
-        <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tighter uppercase">
-          Gestão de Chamados
-        </h2>
+        <div>
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tighter uppercase">
+            Gestão de Chamados
+          </h2>
+        </div>
         
-        {/* Grupo de Busca + Botão de Tema (Onde estava seu cursor) */}
         <div className="flex items-center gap-3">
           <input 
             type="text" 
             placeholder="Filtrar por título ou ID..." 
-            className="p-2 border rounded-lg text-xs w-64 outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white dark:placeholder-slate-500"
+            className="p-2.5 border rounded-xl text-xs w-64 outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900 dark:border-slate-800 dark:text-white"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
@@ -94,125 +81,95 @@ export default function ListaChamados() {
         </div>
       </div>
 
-      {/* Tabela com suporte a dark mode [cite: 2026-03-02] */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
         <table className="w-full text-left text-[11px]">
-          <thead className="bg-gray-50 dark:bg-slate-700/50 border-b border-gray-100 dark:border-slate-700 text-gray-400 dark:text-slate-400 uppercase font-bold">
+          <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500 uppercase font-bold">
             <tr>
-              <th className="px-4 py-3">ID</th>
-              <th className="px-4 py-3">Título</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Técnico</th>
-              <th className="px-4 py-3">Urgência</th>
-              <th className="px-4 py-3">Prioridade</th>
-              <th className="px-4 py-3">Ações</th>
+              <th className="px-6 py-4">ID</th>
+              <th className="px-6 py-4">Título</th>
+              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4">Técnico</th>
+              <th className="px-6 py-4">Urgência</th>
+              <th className="px-6 py-4">Prioridade</th>
+              <th className="px-6 py-4 text-right">Ações</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {ordensFiltradas.map((os: any) => (
-              <tr key={os.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
-                <td className="px-4 py-4 font-mono text-blue-600 dark:text-blue-400">#{os.id}</td>
-                <td className="px-4 py-4 font-bold text-gray-800 dark:text-slate-200">{os.titulo}</td>
-                <td className="px-4 py-4">
-                  <span className={`px-2 py-1 rounded-full text-[9px] font-black uppercase ${
-                    os.status === 'Fechado' 
-                      ? 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400' 
-                      : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              <tr key={os.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                <td className="px-6 py-4 font-mono text-blue-600 dark:text-blue-400 font-bold">#{os.id}</td>
+                <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">{os.titulo}</td>
+                <td className="px-6 py-4">
+                  <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase ${
+                    os.status === 'Fechado' ? 'bg-slate-100 text-slate-500 dark:bg-slate-800' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                   }`}>
                     {os.status}
                   </span>
                 </td>
-                <td className="px-4 py-4 text-gray-500 dark:text-slate-400 font-medium">
-                  {os.usuario?.nome || <span className="text-red-300 dark:text-red-400/60">Não atribuído</span>}
+                <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
+                  {os.usuario?.nome || "Não atribuído"}
                 </td> 
-                <td className="px-4 py-4 dark:text-slate-300">{os.urgencia}</td>
-                <td className="px-4 py-4 dark:text-slate-300">{os.prioridade}</td>
-                <td className="px-4 py-4">
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => abrirModalEdicao(os)} 
-                      className="text-blue-600 dark:text-blue-400 font-black hover:underline"
-                    >
-                      EDITAR
-                    </button>
-                    <span className="text-gray-300 dark:text-slate-600">|</span>
-                    <button 
-                      onClick={() => deletarChamado(os.id)} 
-                      className="text-red-500 dark:text-red-400 font-black hover:underline"
-                    >
-                      EXCLUIR
-                    </button>
+                <td className="px-6 py-4 dark:text-slate-300 font-medium">{os.urgencia}</td>
+                <td className="px-6 py-4 dark:text-slate-300 font-medium">{os.prioridade}</td>
+                <td className="px-6 py-4 text-right">
+                  <div className="flex justify-end gap-3">
+                    <button onClick={() => abrirModalEdicao(os)} className="text-blue-600 dark:text-blue-400 font-black hover:underline">EDITAR</button>
+                    <button onClick={() => deletarChamado(os.id)} className="text-red-500 dark:text-red-400 font-black hover:underline">EXCLUIR</button>
                   </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-        {ordensFiltradas.length === 0 && (
-          <div className="p-10 text-center text-gray-400 dark:text-slate-500 font-medium">
-            Nenhum chamado encontrado.
-          </div>
-        )}
       </div>
 
-      {/* MODAL DE EDIÇÃO COM DARK MODE */}
+      {/* MODAL DE EDIÇÃO RESTAURADO COM TODOS OS CAMPOS */}
       {chamadoSelecionado && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-xl rounded-xl shadow-2xl p-6 border dark:border-slate-700">
-            <h3 className="text-lg font-black mb-6 border-b dark:border-slate-700 pb-4 text-slate-800 dark:text-slate-100">
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl p-8 border dark:border-slate-800 shadow-2xl">
+            <h3 className="text-xl font-black mb-6 text-slate-800 dark:text-white border-b dark:border-slate-800 pb-4">
               Editar Chamado #{chamadoSelecionado.id}
             </h3>
             <form onSubmit={salvarEdicao} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase">Técnico Responsável</label>
-                  <select 
-                    value={tecnicoId} 
-                    onChange={(e) => setTecnicoId(e.target.value)} 
-                    className="w-full p-2 bg-gray-50 dark:bg-slate-700 border dark:border-slate-600 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
-                  >
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Técnico</label>
+                  <select value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)} className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm dark:text-white">
                     <option value="">Selecione...</option>
-                    {tecnicos.map((t: any) => (
-                      <option key={t.id} value={t.id}>{t.nome}</option>
-                    ))}
+                    {tecnicos.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase">Status</label>
-                  <select 
-                    value={status} 
-                    onChange={(e) => setStatus(e.target.value)} 
-                    className="w-full p-2 bg-gray-50 dark:bg-slate-700 border dark:border-slate-600 rounded text-sm dark:text-white"
-                  >
-                    <option>Novo</option>
-                    <option>Em andamento</option>
-                    <option>Fechado</option>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Status</label>
+                  <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm dark:text-white">
+                    <option>Novo</option><option>Em andamento</option><option>Fechado</option>
                   </select>
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase">Solução Aplicada</label>
-                <textarea 
-                  value={solucao} 
-                  onChange={(e) => setSolucao(e.target.value)} 
-                  className="w-full p-3 bg-gray-50 dark:bg-slate-700 border dark:border-slate-600 rounded text-sm h-24 outline-none focus:ring-2 focus:ring-blue-500 dark:text-white" 
-                  placeholder="Descreva o que foi feito..."
-                />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Urgência</label>
+                  <select value={urgencia} onChange={(e) => setUrgencia(e.target.value)} className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm dark:text-white">
+                    <option>Baixa</option><option>Média</option><option>Alta</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Prioridade</label>
+                  <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm dark:text-white">
+                    <option>Baixa</option><option>Média</option><option>Alta</option>
+                  </select>
+                </div>
               </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Solução</label>
+                <textarea value={solucao} onChange={(e) => setSolucao(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm h-28 dark:text-white" />
+              </div>
+
               <div className="flex justify-end gap-3 pt-4">
-                <button 
-                  type="button" 
-                  onClick={() => setChamadoSelecionado(null)} 
-                  className="text-xs font-bold text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
-                >
-                  CANCELAR
-                </button>
-                <button 
-                  type="submit" 
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-8 rounded-lg text-xs shadow-lg transition-all"
-                >
-                  SALVAR ALTERAÇÕES
-                </button>
+                <button type="button" onClick={() => setChamadoSelecionado(null)} className="text-xs font-bold text-slate-400">CANCELAR</button>
+                <button type="submit" className="bg-blue-600 text-white font-bold py-2.5 px-8 rounded-xl text-xs shadow-lg">SALVAR ALTERAÇÕES</button>
               </div>
             </form>
           </div>
