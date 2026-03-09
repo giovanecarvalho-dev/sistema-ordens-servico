@@ -1,4 +1,3 @@
--- Criação automática das tabelas em português
 CREATE TABLE IF NOT EXISTS usuarios (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(80) NOT NULL, --segundo o ibge, o nome completo tem em média 80 caracteres
