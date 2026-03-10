@@ -36,13 +36,18 @@ export default function Sidebar() {
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
+    const cpf = localStorage.getItem('tecnicoLogado') || '';
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
+    if (cpf) localStorage.setItem(`theme_${cpf}`, newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
   const logout = () => {
+    const cpf = localStorage.getItem('tecnicoLogado') || '';
+    const temaAtual = localStorage.getItem('theme') || 'light';
     localStorage.clear();
+    if (cpf) localStorage.setItem(`theme_${cpf}`, temaAtual);
     router.push('/login');
   };
 
@@ -53,28 +58,29 @@ export default function Sidebar() {
   return (
     <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed h-full shadow-sm">
       <div className="p-6">
-  <div className="flex items-center justify-between">
-    <h1 className="text-xl font-black tracking-tighter text-blue-600 dark:text-blue-400 uppercase">
-      Central de Suporte Técnico
-    </h1>
-    <button
-      onClick={toggleTheme}
-      className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0"
-      title={theme === 'light' ? 'Ativar Modo Escuro' : 'Ativar Modo Claro'}
-    >
-      {theme === 'light' ? (
-        <Moon className="text-slate-600" size={18} />
-      ) : (
-        <Sun className="text-yellow-400" size={18} />
-      )}
-    </button>
-  </div>
-  {nome && (
-    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 truncate">
-      {nome} — <span className="font-bold text-blue-500">{cargo}</span>
-    </p>
-  )}
-</div>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-black tracking-tighter text-blue-600 dark:text-blue-400 uppercase">
+            Central de Suporte Técnico
+          </h1>
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0"
+            title={theme === 'light' ? 'Ativar Modo Escuro' : 'Ativar Modo Claro'}
+          >
+            {theme === 'light' ? (
+              <Moon className="text-slate-600" size={18} />
+            ) : (
+              <Sun className="text-yellow-400" size={18} />
+            )}
+          </button>
+        </div>
+        {nome && (
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 truncate">
+            {nome} — <span className="font-bold text-blue-500">{cargo}</span>
+          </p>
+        )}
+      </div>
+
       <nav className="flex-1 px-4 space-y-1">
         <Link href="/novo" className={linkClass}>
           <UserPlus size={18} /> Criar Chamado

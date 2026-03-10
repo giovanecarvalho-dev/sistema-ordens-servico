@@ -26,7 +26,17 @@ export default function Login() {
           localStorage.setItem('usuarioId', user.id);
           localStorage.setItem('usuarioCargo', user.cargo);
           localStorage.setItem('usuarioNome', user.nome);
-          router.push('/');
+
+          // Carrega o tema salvo para este usuário específico
+          const temaSalvo = localStorage.getItem(`theme_${cpf}`) || 'light';
+          localStorage.setItem('theme', temaSalvo);
+          document.documentElement.classList.toggle('dark', temaSalvo === 'dark');
+
+          if (user.cargo === 'Usuario') {
+            router.push('/novo');
+          } else {
+            router.push('/');
+          }
         }
       }
     } catch (err) {
@@ -50,16 +60,16 @@ export default function Login() {
           <>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">Nome Completo</label>
-              <input 
-                required type="text" value={nome} onChange={(e) => setNome(e.target.value)} 
-                placeholder="Digite seu nome" 
+              <input
+                required type="text" value={nome} onChange={(e) => setNome(e.target.value)}
+                placeholder="Digite seu nome"
                 className="w-full p-3 bg-gray-50 border border-slate-300 rounded-lg text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400"
               />
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">E-mail</label>
-              <input 
-                required type="email" value={email} onChange={(e) => setEmail(e.target.value)} 
+              <input
+                required type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
                 className="w-full p-3 bg-gray-50 border border-slate-300 rounded-lg text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400"
               />
@@ -69,18 +79,19 @@ export default function Login() {
 
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">CPF</label>
-          <input 
-            required type="text" value={cpf} onChange={(e) => setCpf(e.target.value)} 
-            placeholder="00000000000" maxLength={11}
-            className="w-full p-3 bg-gray-50 border border-slate-300 rounded-lg text-sm font-mono text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400"
-          />
+          <input
+  required type="text" value={cpf}
+  onChange={(e) => setCpf(e.target.value.replace(/\D/g, ''))}
+  placeholder="00000000000" maxLength={11}
+  className="w-full p-3 bg-gray-50 border border-slate-300 rounded-lg text-sm font-mono text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400"
+/>
         </div>
 
         <div className="space-y-1">
           <label className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">Senha</label>
-          <input 
-            required type="password" value={senha} onChange={(e) => setSenha(e.target.value)} 
-            placeholder="••••••••" 
+          <input
+            required type="password" value={senha} onChange={(e) => setSenha(e.target.value)}
+            placeholder="••••••••"
             className="w-full p-3 bg-gray-50 border border-slate-300 rounded-lg text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400"
           />
         </div>
