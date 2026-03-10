@@ -13,18 +13,18 @@ CREATE TABLE IF NOT EXISTS ordem_servicos (
     id SERIAL PRIMARY KEY,
     titulo VARCHAR(100) NOT NULL,
     descricao VARCHAR(200) NOT NULL,
-    status VARCHAR(20) DEFAULT 'Aberto',
+    status VARCHAR(20) DEFAULT 'Novo',
     urgencia VARCHAR(15),
     prioridade VARCHAR(15),
     categoria VARCHAR(20),
     localizacao VARCHAR(120) NOT NULL,
     solucao VARCHAR(200),
     usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+    tecnico_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Usuário admin padrão
 INSERT INTO usuarios (nome, cpf, email, senha, cargo) VALUES (
     'Giovane Oliveira Carvalho',
     '04414426251',

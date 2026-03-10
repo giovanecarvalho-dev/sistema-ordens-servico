@@ -17,7 +17,7 @@ class OrdemServicoController extends Controller
     )]
     public function index()
     {
-        return OrdemServico::with('usuario')
+        return OrdemServico::with(['usuario', 'tecnico'])
             ->orderBy('criado_em', 'desc')
             ->get();
     }
@@ -29,15 +29,13 @@ class OrdemServicoController extends Controller
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ["titulo", "descricao", "usuario_id"],
+                required: ["titulo", "descricao", "usuario_id", "localizacao"],
                 properties: [
                     new OA\Property(property: "titulo", type: "string", example: "Troca de toner"),
                     new OA\Property(property: "descricao", type: "string", example: "Impressora do RH sem tinta"),
                     new OA\Property(property: "usuario_id", type: "integer", example: 1),
-                    new OA\Property(property: "categoria", type: "string", example: "Rede", enum: ["Rede", "Infraestrutura", "Acesso"]),
+                    new OA\Property(property: "categoria", type: "string", example: "Rede"),
                     new OA\Property(property: "localizacao", type: "string", example: "Bloco A - Sala 10"),
-                    new OA\Property(property: "urgencia", type: "string", example: "Alta"),
-                    new OA\Property(property: "prioridade", type: "string", example: "Média"),
                 ]
             )
         ),
@@ -49,18 +47,23 @@ class OrdemServicoController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'titulo'     => 'required|string|max:100',
-            'descricao'  => 'required|string',
-            'usuario_id' => 'required|exists:usuarios,id',
-            'categoria'  => 'nullable|string|in:Rede,Infraestrutura,Acesso',
-            'localizacao'=> 'nullable|string|max:120',
-            'urgencia'   => 'nullable|string',
-            'prioridade' => 'nullable|string',
+            'titulo'      => 'required|string|max:100',
+            'descricao'   => 'required|string|max:200',
+            'usuario_id'  => 'required|exists:usuarios,id',
+            'categoria'   => 'nullable|string|in:Rede,Infraestrutura,Acesso',
+            'localizacao' => 'required|string|max:120',
         ]);
 
-        $novaOrdem = OrdemServico::create($request->all());
+        $novaOrdem = OrdemServico::create([
+            'titulo'      => $request->titulo,
+            'descricao'   => $request->descricao,
+            'usuario_id'  => $request->usuario_id,
+            'categoria'   => $request->categoria,
+            'localizacao' => $request->localizacao,
+            'status'      => 'Novo',
+        ]);
 
-        return response()->json($novaOrdem->load('usuario'), 201);
+        return response()->json($novaOrdem->load(['usuario', 'tecnico']), 201);
     }
 
     #[OA\Get(
@@ -75,7 +78,7 @@ class OrdemServicoController extends Controller
     )]
     public function show($id)
     {
-        return OrdemServico::with('usuario')->findOrFail($id);
+        return OrdemServico::with(['usuario', 'tecnico'])->findOrFail($id);
     }
 
     #[OA\Put(
@@ -88,8 +91,16 @@ class OrdemServicoController extends Controller
     public function update(Request $request, $id)
     {
         $item = OrdemServico::findOrFail($id);
-        $item->update($request->all());
-        return response()->json($item->load('usuario'), 200);
+
+        $item->update([
+            'status'     => $request->status     ?? $item->status,
+            'urgencia'   => $request->urgencia   ?? $item->urgencia,
+            'prioridade' => $request->prioridade ?? $item->prioridade,
+            'solucao'    => $request->solucao    ?? $item->solucao,
+            'tecnico_id' => $request->tecnico_id ?? $item->tecnico_id,
+        ]);
+
+        return response()->json($item->load(['usuario', 'tecnico']), 200);
     }
 
     #[OA\Delete(

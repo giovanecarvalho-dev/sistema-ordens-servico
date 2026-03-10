@@ -11,24 +11,29 @@ class OrdemServico extends Model
 
     protected $table = 'ordem_servicos';
 
-    // Mapeamento dos timestamps para português
     const CREATED_AT = 'criado_em';
     const UPDATED_AT = 'atualizado_em';
 
     protected $fillable = [
-        'titulo', 
-        'descricao', 
-        'status', 
+        'titulo',
+        'descricao',
+        'status',
         'urgencia',
         'prioridade',
         'categoria',
         'localizacao',
         'solucao',
-        'usuario_id' 
+        'usuario_id',
+        'tecnico_id',
     ];
 
     public function usuario()
     {
         return $this->belongsTo(User::class, 'usuario_id');
+    }
+
+    public function tecnico()
+    {
+        return $this->belongsTo(User::class, 'tecnico_id');
     }
 }

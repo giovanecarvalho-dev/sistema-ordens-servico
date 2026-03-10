@@ -35,7 +35,7 @@ export default function ListaChamados() {
   }, []);
 
   const ordensFiltradas = ordens
-    .filter((os: any) => cargo === 'Tecnico' ? String(os.usuario_id) === String(meuUsuarioId) : true)
+    .filter((os: any) => cargo === 'Tecnico' ? String(os.tecnico_id) === String(meuUsuarioId) : true)
     .filter((os: any) =>
       os.titulo.toLowerCase().includes(busca.toLowerCase()) ||
       os.id.toString().includes(busca)
@@ -55,7 +55,7 @@ export default function ListaChamados() {
   const abrirModalEdicao = (os: any) => {
     setChamadoSelecionado(os);
     setStatus(os.status);
-    setTecnicoId(os.usuario_id || '');
+    setTecnicoId(os.tecnico_id || '');
     setUrgencia(os.urgencia || 'Média');
     setPrioridade(os.prioridade || 'Média');
     setSolucao(os.solucao || '');
@@ -66,7 +66,7 @@ export default function ListaChamados() {
     try {
       await api.put(`/ordens/${chamadoSelecionado.id}`, {
         status, urgencia, prioridade,
-        usuario_id: tecnicoId,
+        tecnico_id: tecnicoId || null,
         solucao
       });
       buscarDados();
@@ -78,9 +78,9 @@ export default function ListaChamados() {
 
   const urgenciaCor: any = {
     'Muito Alta': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    'Alta': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-    'Média': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-    'Baixa': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    'Alta':       'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+    'Média':      'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    'Baixa':      'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   };
 
   const categoriaCor: any = {
@@ -117,6 +117,7 @@ export default function ListaChamados() {
               <th className="px-6 py-4">Título</th>
               <th className="px-6 py-4">Categoria</th>
               <th className="px-6 py-4">Localização</th>
+              <th className="px-6 py-4">Aberto por</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4">Urgência</th>
               <th className="px-6 py-4">Prioridade</th>
@@ -138,10 +139,15 @@ export default function ListaChamados() {
                 <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
                   {os.localizacao || <span className="italic text-slate-300 dark:text-slate-600">Não informada</span>}
                 </td>
+                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                  {os.usuario?.nome || '-'}
+                </td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
                     os.status === 'Fechado'
                       ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                      : os.status === 'Em andamento'
+                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                       : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                   }`}>
                     {os.status}
@@ -157,8 +163,8 @@ export default function ListaChamados() {
                     {os.prioridade || '-'}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
-                  {os.usuario?.nome || "Pendente"}
+                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                  {os.tecnico?.nome || <span className="italic text-slate-300 dark:text-slate-600">Não atribuído</span>}
                 </td>
                 <td className="px-6 py-4 text-slate-500 dark:text-slate-400 max-w-[160px]">
                   {os.solucao
@@ -176,7 +182,6 @@ export default function ListaChamados() {
         </table>
       </div>
 
-      {/* MODAL DE EDIÇÃO */}
       {chamadoSelecionado && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl">
@@ -185,7 +190,7 @@ export default function ListaChamados() {
               <div>
                 <label className="text-xs font-bold text-slate-400 uppercase">Técnico</label>
                 <select value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)} className={selectClass}>
-                  <option value="">Selecione...</option>
+                  <option value="">Não atribuído</option>
                   {tecnicos.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
                 </select>
               </div>
