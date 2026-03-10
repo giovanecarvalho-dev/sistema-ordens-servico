@@ -87,9 +87,7 @@ class UsuarioController extends Controller
             return response()->json(['message' => 'Credenciais inválidas'], 401);
         }
 
-        return response()->json([
-            'user' => $usuario
-        ]);
+        return response()->json(['user' => $usuario]);
     }
 
     #[OA\Put(
@@ -99,17 +97,9 @@ class UsuarioController extends Controller
         parameters: [
             new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
         ],
-        requestBody: new OA\RequestBody(
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: "cargo", type: "string", example: "Tecnico", enum: ["Usuario", "Tecnico", "Admin"])
-                ]
-            )
-        ),
         responses: [
             new OA\Response(response: 200, description: "Cargo atualizado"),
-            new OA\Response(response: 404, description: "Usuário não encontrado"),
-            new OA\Response(response: 422, description: "Erro de validação")
+            new OA\Response(response: 404, description: "Usuário não encontrado")
         ]
     )]
     public function update(Request $request, $id)
@@ -121,6 +111,45 @@ class UsuarioController extends Controller
         ]);
 
         $usuario->cargo = $request->cargo;
+        $usuario->save();
+
+        return response()->json($usuario);
+    }
+
+    #[OA\Put(
+        path: "/api/usuarios/{id}/perfil",
+        tags: ["Usuarios"],
+        summary: "Atualiza perfil do usuário logado",
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Perfil atualizado"),
+            new OA\Response(response: 400, description: "Senha atual incorreta"),
+            new OA\Response(response: 404, description: "Usuário não encontrado")
+        ]
+    )]
+    public function updatePerfil(Request $request, $id)
+    {
+        $usuario = User::findOrFail($id);
+
+        $request->validate([
+            'nome'       => 'required|string|max:80',
+            'email'      => 'required|email|unique:usuarios,email,' . $id,
+            'nova_senha' => 'sometimes|nullable|string|min:4',
+            'senha_atual'=> 'sometimes|nullable|string',
+        ]);
+
+        $usuario->nome  = $request->nome;
+        $usuario->email = $request->email;
+
+        if ($request->nova_senha) {
+            if (!Hash::check($request->senha_atual, $usuario->senha)) {
+                return response()->json(['message' => 'Senha atual incorreta.'], 400);
+            }
+            $usuario->senha = Hash::make($request->nova_senha);
+        }
+
         $usuario->save();
 
         return response()->json($usuario);

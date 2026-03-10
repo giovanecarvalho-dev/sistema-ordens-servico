@@ -5,6 +5,9 @@ import api from './services/api';
 export default function ListaChamados() {
   const [ordens, setOrdens] = useState([]);
   const [busca, setBusca] = useState('');
+  const [filtroStatus, setFiltroStatus] = useState('');
+  const [filtroCategoria, setFiltroCategoria] = useState('');
+  const [filtroUrgencia, setFiltroUrgencia] = useState('');
   const [tecnicos, setTecnicos] = useState([]);
   const [chamadoSelecionado, setChamadoSelecionado] = useState<any>(null);
   const [tecnicoId, setTecnicoId] = useState('');
@@ -36,10 +39,10 @@ export default function ListaChamados() {
 
   const ordensFiltradas = ordens
     .filter((os: any) => cargo === 'Tecnico' ? String(os.tecnico_id) === String(meuUsuarioId) : true)
-    .filter((os: any) =>
-      os.titulo.toLowerCase().includes(busca.toLowerCase()) ||
-      os.id.toString().includes(busca)
-    );
+    .filter((os: any) => busca === '' || os.titulo.toLowerCase().includes(busca.toLowerCase()) || os.id.toString().includes(busca))
+    .filter((os: any) => filtroStatus === '' || os.status === filtroStatus)
+    .filter((os: any) => filtroCategoria === '' || os.categoria === filtroCategoria)
+    .filter((os: any) => filtroUrgencia === '' || os.urgencia === filtroUrgencia);
 
   const deletarChamado = async (id: number) => {
     if (confirm("Deseja excluir este chamado permanentemente?")) {
@@ -64,11 +67,13 @@ export default function ListaChamados() {
   const salvarEdicao = async (e: any) => {
     e.preventDefault();
     try {
-      await api.put(`/ordens/${chamadoSelecionado.id}`, {
-        status, urgencia, prioridade,
-        tecnico_id: tecnicoId || null,
-        solucao
-      });
+      const payload: any = { status, solucao };
+      if (cargo === 'Admin') {
+        payload.urgencia = urgencia;
+        payload.prioridade = prioridade;
+        payload.tecnico_id = tecnicoId || null;
+      }
+      await api.put(`/ordens/${chamadoSelecionado.id}`, payload);
       buscarDados();
       setChamadoSelecionado(null);
     } catch (err) {
@@ -90,10 +95,11 @@ export default function ListaChamados() {
   };
 
   const selectClass = "w-full p-3 mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500";
+  const filterClass = "p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white";
 
   return (
     <div className="p-10">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">
             Gestão de Chamados
@@ -103,10 +109,41 @@ export default function ListaChamados() {
         <input
           type="text"
           placeholder="Filtrar chamados..."
-          className="p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs w-64 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
+          className={`${filterClass} w-64`}
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
+      </div>
+
+      {/* FILTROS */}
+      <div className="flex gap-3 mb-6 flex-wrap">
+        <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className={filterClass}>
+          <option value="">Todos os status</option>
+          <option>Novo</option>
+          <option>Em andamento</option>
+          <option>Fechado</option>
+        </select>
+        <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className={filterClass}>
+          <option value="">Todas as categorias</option>
+          <option>Rede</option>
+          <option>Infraestrutura</option>
+          <option>Acesso</option>
+        </select>
+        <select value={filtroUrgencia} onChange={(e) => setFiltroUrgencia(e.target.value)} className={filterClass}>
+          <option value="">Todas as urgências</option>
+          <option>Muito Alta</option>
+          <option>Alta</option>
+          <option>Média</option>
+          <option>Baixa</option>
+        </select>
+        {(filtroStatus || filtroCategoria || filtroUrgencia) && (
+          <button
+            onClick={() => { setFiltroStatus(''); setFiltroCategoria(''); setFiltroUrgencia(''); }}
+            className="text-xs font-bold text-red-400 hover:text-red-600 px-3"
+          >
+            Limpar filtros
+          </button>
+        )}
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-x-auto">
@@ -127,6 +164,13 @@ export default function ListaChamados() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {ordensFiltradas.length === 0 && (
+              <tr>
+                <td colSpan={11} className="px-6 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
+                  Nenhum chamado encontrado.
+                </td>
+              </tr>
+            )}
             {ordensFiltradas.map((os: any) => (
               <tr key={os.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                 <td className="px-6 py-4 font-mono text-blue-600 dark:text-blue-400">#{os.id}</td>
@@ -174,7 +218,9 @@ export default function ListaChamados() {
                 </td>
                 <td className="px-6 py-4 text-right whitespace-nowrap">
                   <button onClick={() => abrirModalEdicao(os)} className="text-blue-600 font-bold mr-4 hover:underline">EDITAR</button>
-                  <button onClick={() => deletarChamado(os.id)} className="text-red-500 font-bold hover:underline">EXCLUIR</button>
+                  {cargo === 'Admin' && (
+                    <button onClick={() => deletarChamado(os.id)} className="text-red-500 font-bold hover:underline">EXCLUIR</button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -185,38 +231,46 @@ export default function ListaChamados() {
       {chamadoSelecionado && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl">
-            <h3 className="text-xl font-black mb-6 text-slate-800 dark:text-white">Editar Chamado #{chamadoSelecionado.id}</h3>
+            <h3 className="text-xl font-black mb-2 text-slate-800 dark:text-white">Editar Chamado #{chamadoSelecionado.id}</h3>
+            <p className="text-xs text-slate-400 mb-6 uppercase tracking-widest font-bold">{chamadoSelecionado.titulo}</p>
             <form onSubmit={salvarEdicao} className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase">Técnico</label>
-                <select value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)} className={selectClass}>
-                  <option value="">Não atribuído</option>
-                 {tecnicos
-                  .filter((t: any) => t.cargo === 'Tecnico' || t.cargo === 'Admin')
-                   .map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)
-                  }
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase">Urgência</label>
-                  <select value={urgencia} onChange={(e) => setUrgencia(e.target.value)} className={selectClass}>
-                    <option>Muito Alta</option>
-                    <option>Alta</option>
-                    <option>Média</option>
-                    <option>Baixa</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase">Prioridade</label>
-                  <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className={selectClass}>
-                    <option>Muito Alta</option>
-                    <option>Alta</option>
-                    <option>Média</option>
-                    <option>Baixa</option>
-                  </select>
-                </div>
-              </div>
+
+              {/* CAMPOS EXCLUSIVOS DO ADMIN */}
+              {cargo === 'Admin' && (
+                <>
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase">Técnico</label>
+                    <select value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)} className={selectClass}>
+                      <option value="">Não atribuído</option>
+                      {tecnicos
+                        .filter((t: any) => t.cargo === 'Tecnico' || t.cargo === 'Admin')
+                        .map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)
+                      }
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-bold text-slate-400 uppercase">Urgência</label>
+                      <select value={urgencia} onChange={(e) => setUrgencia(e.target.value)} className={selectClass}>
+                        <option>Muito Alta</option>
+                        <option>Alta</option>
+                        <option>Média</option>
+                        <option>Baixa</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-400 uppercase">Prioridade</label>
+                      <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className={selectClass}>
+                        <option>Muito Alta</option>
+                        <option>Alta</option>
+                        <option>Média</option>
+                        <option>Baixa</option>
+                      </select>
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div>
                 <label className="text-xs font-bold text-slate-400 uppercase">Status</label>
                 <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
