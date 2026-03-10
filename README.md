@@ -1,60 +1,57 @@
-
 # Sistema de Gerenciamento de Ordens de Serviço
 
-Este projeto consiste em uma plataforma integrada para a gestão de chamados técnicos, composta por uma API REST desenvolvida em Laravel e uma interface de usuário em Next.js. Toda a infraestrutura é operada através de containers Docker para garantir a paridade entre os ambientes de desenvolvimento e produção.
+Plataforma integrada para gestão de chamados técnicos, composta por uma API REST em Laravel e interface em Next.js. Toda a infraestrutura é operada via Docker.
 
 ## Arquitetura do Sistema
 
-O ecossistema é dividido em três serviços principais:
-1. API (Backend): Framework Laravel 11.
-2. Frontend: Framework Next.js 15.
-3. Banco de Dados: PostgreSQL 15.
+Três serviços principais:
+1. **API (Backend):** Laravel 11
+2. **Frontend:** Next.js 15
+3. **Banco de Dados:** PostgreSQL 15
 
-## Procedimentos de Inicialização
+## Configuração Inicial
 
-Para implantar o ambiente localmente, certifique-se de que o Docker e o Docker Compose estejam instalados e execute os seguintes passos:
+### 1. Banco de Dados
 
-1. Construção e execução dos containers:
-   docker-compose up -d --build
+Copie o arquivo de exemplo e configure suas credenciais de admin:
+```bash
+cp init-db/estrutura.example.sql init-db/estrutura.sql
+```
 
-2. Provisionamento do banco de dados (Migrations):
-   docker-compose exec api php artisan migrate 
+Edite o `init-db/estrutura.sql` e descomente o bloco `INSERT` no final, preenchendo com seus dados.
 
-## Acesso aos Serviços
+Para gerar o hash da senha, após subir os containers rode:
+```bash
+docker exec os_api php -r "echo password_hash('sua_senha', PASSWORD_BCRYPT, ['cost' => 12]);"
+```
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- Porta do Banco de Dados: 5432
+### 2. Subindo os containers
+```bash
+docker compose up --build
+```
 
-## Persistência de Dados
-
-# Sistema de Gerenciamento de Ordens de Serviço
-
-Este projeto consiste em uma plataforma integrada para a gestão de chamados técnicos, composta por uma API REST desenvolvida em Laravel e uma interface de usuário em Next.js. Toda a infraestrutura é operada através de containers Docker para garantir a paridade entre os ambientes de desenvolvimento e produção.
-
-## Arquitetura do Sistema
-
-O ecossistema é dividido em três serviços principais:
-1. API (Backend): Framework Laravel 11.
-2. Frontend: Framework Next.js 15.
-3. Banco de Dados: PostgreSQL 15.
-
-## Procedimentos de Inicialização
-
-Para implantar o ambiente localmente, certifique-se de que o Docker e o Docker Compose estejam instalados e execute os seguintes passos:
-
-1. Construção e execução dos containers:
-   docker-compose up -d --build
-
-2. Provisionamento do banco de dados (Migrations e Seed):
-   docker-compose exec api php artisan migrate --seed
+Para recriar o banco do zero (apaga todos os dados):
+```bash
+docker compose down -v && docker compose up --build
+```
 
 ## Acesso aos Serviços
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- Porta do Banco de Dados: 5432
+| Serviço | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:8000 |
+| Swagger (Docs) | http://localhost:8000/api/documentation |
+| Banco de Dados | localhost:5432 |
+
+## Controle de Acesso
+
+| Cargo | Permissões |
+|---|---|
+| **Usuario** | Criar chamados |
+| **Tecnico** | Criar e visualizar chamados atribuídos a ele |
+| **Admin** | Acesso total ao sistema |
 
 ## Persistência de Dados
 
-O projeto utiliza volumes nomeados no Docker para garantir que os dados armazenados no PostgreSQL sejam persistidos mesmo após o encerramento ou remoção dos containers.
+O projeto utiliza volumes nomeados no Docker para garantir que os dados do PostgreSQL sejam persistidos mesmo após o encerramento dos containers.
