@@ -191,7 +191,10 @@ export default function ListaChamados() {
                 <label className="text-xs font-bold text-slate-400 uppercase">Técnico</label>
                 <select value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)} className={selectClass}>
                   <option value="">Não atribuído</option>
-                  {tecnicos.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                 {tecnicos
+                  .filter((t: any) => t.cargo === 'Tecnico' || t.cargo === 'Admin')
+                   .map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)
+                  }
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">

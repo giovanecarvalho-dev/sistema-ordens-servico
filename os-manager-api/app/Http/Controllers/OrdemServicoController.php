@@ -92,14 +92,13 @@ class OrdemServicoController extends Controller
     {
         $item = OrdemServico::findOrFail($id);
 
-        $item->update([
-            'status'     => $request->status     ?? $item->status,
-            'urgencia'   => $request->urgencia   ?? $item->urgencia,
-            'prioridade' => $request->prioridade ?? $item->prioridade,
-            'solucao'    => $request->solucao    ?? $item->solucao,
-            'tecnico_id' => $request->tecnico_id ?? $item->tecnico_id,
-        ]);
-
+      $item->update([
+    'status'     => $request->status     ?? $item->status,
+    'urgencia'   => $request->urgencia   ?? $item->urgencia,
+    'prioridade' => $request->prioridade ?? $item->prioridade,
+    'solucao'    => $request->solucao    ?? $item->solucao,
+    'tecnico_id' => $request->has('tecnico_id') ? ($request->tecnico_id ?: null) : $item->tecnico_id,
+]);
         return response()->json($item->load(['usuario', 'tecnico']), 200);
     }
 

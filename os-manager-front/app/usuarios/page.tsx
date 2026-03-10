@@ -18,11 +18,10 @@ export default function UsuariosPage() {
         })
         .catch((err) => console.error("Erro ao carregar dados:", err));
     }, []);
-
     const contarOrdens = (userId: number) => {
-        return ordens.filter((os: any) => 
-            os.usuario_id === userId && os.status !== 'Fechado'
-        ).length;
+    return ordens.filter((os: any) => 
+        os.tecnico_id != null && os.tecnico_id == userId && os.status !== 'Fechado'
+    ).length;
     };
 
     const alterarCargo = async (userId: number, novoCargo: string) => {
