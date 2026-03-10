@@ -17,7 +17,6 @@ class OrdemServicoController extends Controller
     )]
     public function index()
     {
-        // Ordenando pela nova coluna em português que está no seu DBeaver
         return OrdemServico::with('usuario')
             ->orderBy('criado_em', 'desc')
             ->get();
@@ -30,14 +29,15 @@ class OrdemServicoController extends Controller
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ["titulo","descricao","usuario_id","prioridade","urgencia"],
+                required: ["titulo", "descricao", "usuario_id"],
                 properties: [
                     new OA\Property(property: "titulo", type: "string", example: "Troca de toner"),
                     new OA\Property(property: "descricao", type: "string", example: "Impressora do RH sem tinta"),
                     new OA\Property(property: "usuario_id", type: "integer", example: 1),
-                    new OA\Property(property: "prioridade", type: "string", example: "Média"),
+                    new OA\Property(property: "categoria", type: "string", example: "Rede", enum: ["Rede", "Infraestrutura", "Acesso"]),
+                    new OA\Property(property: "localizacao", type: "string", example: "Bloco A - Sala 10"),
                     new OA\Property(property: "urgencia", type: "string", example: "Alta"),
-                    new OA\Property(property: "localizacao", type: "string", example: "Bloco A - Sala 10")
+                    new OA\Property(property: "prioridade", type: "string", example: "Média"),
                 ]
             )
         ),
@@ -49,11 +49,13 @@ class OrdemServicoController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'titulo' => 'required|string',
-            'descricao' => 'required|string',
+            'titulo'     => 'required|string|max:100',
+            'descricao'  => 'required|string',
             'usuario_id' => 'required|exists:usuarios,id',
-            'prioridade' => 'required|string',
-            'urgencia' => 'required|string',
+            'categoria'  => 'nullable|string|in:Rede,Infraestrutura,Acesso',
+            'localizacao'=> 'nullable|string|max:120',
+            'urgencia'   => 'nullable|string',
+            'prioridade' => 'nullable|string',
         ]);
 
         $novaOrdem = OrdemServico::create($request->all());
@@ -87,7 +89,6 @@ class OrdemServicoController extends Controller
     {
         $item = OrdemServico::findOrFail($id);
         $item->update($request->all());
-
         return response()->json($item->load('usuario'), 200);
     }
 

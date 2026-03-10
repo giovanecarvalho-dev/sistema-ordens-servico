@@ -12,6 +12,8 @@ export default function ListaChamados() {
   const [urgencia, setUrgencia] = useState('');
   const [prioridade, setPrioridade] = useState('');
   const [solucao, setSolucao] = useState('');
+  const [cargo, setCargo] = useState('');
+  const [meuUsuarioId, setMeuUsuarioId] = useState('');
 
   const buscarDados = async () => {
     try {
@@ -26,18 +28,24 @@ export default function ListaChamados() {
     }
   };
 
-  useEffect(() => { buscarDados(); }, []);
+  useEffect(() => {
+    setCargo(localStorage.getItem('usuarioCargo') || '');
+    setMeuUsuarioId(localStorage.getItem('usuarioId') || '');
+    buscarDados();
+  }, []);
 
-  const ordensFiltradas = ordens.filter((os: any) => 
-    os.titulo.toLowerCase().includes(busca.toLowerCase()) || 
-    os.id.toString().includes(busca)
-  );
+  const ordensFiltradas = ordens
+    .filter((os: any) => cargo === 'Tecnico' ? String(os.usuario_id) === String(meuUsuarioId) : true)
+    .filter((os: any) =>
+      os.titulo.toLowerCase().includes(busca.toLowerCase()) ||
+      os.id.toString().includes(busca)
+    );
 
   const deletarChamado = async (id: number) => {
     if (confirm("Deseja excluir este chamado permanentemente?")) {
       try {
         await api.delete(`/ordens/${id}`);
-        buscarDados(); 
+        buscarDados();
       } catch (err) {
         alert("Erro ao excluir chamado.");
       }
@@ -57,9 +65,7 @@ export default function ListaChamados() {
     e.preventDefault();
     try {
       await api.put(`/ordens/${chamadoSelecionado.id}`, {
-        status,
-        urgencia,
-        prioridade,
+        status, urgencia, prioridade,
         usuario_id: tecnicoId,
         solucao
       });
@@ -77,6 +83,12 @@ export default function ListaChamados() {
     'Baixa': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   };
 
+  const categoriaCor: any = {
+    'Rede':           'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    'Infraestrutura': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+    'Acesso':         'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  };
+
   const selectClass = "w-full p-3 mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500";
 
   return (
@@ -88,25 +100,23 @@ export default function ListaChamados() {
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">Visualize e gerencie as ordens de serviço do sistema.</p>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <input 
-            type="text" 
-            placeholder="Filtrar chamados..." 
-            className="p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs w-64 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-          />
-        
-        </div>
+        <input
+          type="text"
+          placeholder="Filtrar chamados..."
+          className="p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs w-64 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+        />
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-widest">
             <tr>
               <th className="px-6 py-4">ID</th>
               <th className="px-6 py-4">Título</th>
+              <th className="px-6 py-4">Categoria</th>
+              <th className="px-6 py-4">Localização</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4">Urgência</th>
               <th className="px-6 py-4">Prioridade</th>
@@ -121,9 +131,17 @@ export default function ListaChamados() {
                 <td className="px-6 py-4 font-mono text-blue-600 dark:text-blue-400">#{os.id}</td>
                 <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">{os.titulo}</td>
                 <td className="px-6 py-4">
+                  <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${categoriaCor[os.categoria] || 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                    {os.categoria || '-'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                  {os.localizacao || <span className="italic text-slate-300 dark:text-slate-600">Não informada</span>}
+                </td>
+                <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
-                    os.status === 'Fechado' 
-                      ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' 
+                    os.status === 'Fechado'
+                      ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
                       : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                   }`}>
                     {os.status}
@@ -143,12 +161,12 @@ export default function ListaChamados() {
                   {os.usuario?.nome || "Pendente"}
                 </td>
                 <td className="px-6 py-4 text-slate-500 dark:text-slate-400 max-w-[160px]">
-                  {os.solucao 
+                  {os.solucao
                     ? <span className="truncate block text-xs" title={os.solucao}>{os.solucao.substring(0, 40)}{os.solucao.length > 40 ? '...' : ''}</span>
                     : <span className="text-xs text-slate-300 dark:text-slate-600 italic">Sem solução</span>
                   }
                 </td>
-                <td className="px-6 py-4 text-right">
+                <td className="px-6 py-4 text-right whitespace-nowrap">
                   <button onClick={() => abrirModalEdicao(os)} className="text-blue-600 font-bold mr-4 hover:underline">EDITAR</button>
                   <button onClick={() => deletarChamado(os.id)} className="text-red-500 font-bold hover:underline">EXCLUIR</button>
                 </td>
@@ -201,9 +219,9 @@ export default function ListaChamados() {
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-400 uppercase">Solução</label>
-                <textarea 
-                  value={solucao} 
-                  onChange={(e) => setSolucao(e.target.value)} 
+                <textarea
+                  value={solucao}
+                  onChange={(e) => setSolucao(e.target.value)}
                   placeholder="Descreva a solução aplicada..."
                   className="w-full p-3 mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-white text-sm h-28 resize-none outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
                 />

@@ -12,12 +12,13 @@ CREATE TABLE IF NOT EXISTS usuarios (
 CREATE TABLE IF NOT EXISTS ordem_servicos (
     id SERIAL PRIMARY KEY,
     titulo VARCHAR(100) NOT NULL,
-    descricao TEXT NOT NULL,
+    descricao VARCHAR(200) NOT NULL,
     status VARCHAR(20) DEFAULT 'Aberto',
     urgencia VARCHAR(15),
     prioridade VARCHAR(15),
-    localizacao VARCHAR(120),
-    solucao TEXT,
+    categoria VARCHAR(20),
+    localizacao VARCHAR(120) NOT NULL,
+    solucao VARCHAR(200),
     usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -21,6 +21,7 @@ class OrdemServico extends Model
         'status', 
         'urgencia',
         'prioridade',
+        'categoria',
         'localizacao',
         'solucao',
         'usuario_id' 
