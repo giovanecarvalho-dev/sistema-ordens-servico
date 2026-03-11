@@ -1,29 +1,29 @@
-'use client'
-import { useEffect, useState } from 'react';
-import api from './services/api';
+"use client";
+import { useEffect, useState } from "react";
+import api from "./services/api";
 
 export default function ListaChamados() {
   const [ordens, setOrdens] = useState([]);
-  const [busca, setBusca] = useState('');
-  const [filtroStatus, setFiltroStatus] = useState('');
-  const [filtroCategoria, setFiltroCategoria] = useState('');
-  const [filtroUrgencia, setFiltroUrgencia] = useState('');
+  const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
+  const [filtroUrgencia, setFiltroUrgencia] = useState("");
   const [tecnicos, setTecnicos] = useState([]);
   const [chamadoSelecionado, setChamadoSelecionado] = useState<any>(null);
-  const [tecnicoId, setTecnicoId] = useState('');
-  const [status, setStatus] = useState('');
-  const [urgencia, setUrgencia] = useState('');
-  const [prioridade, setPrioridade] = useState('');
-  const [solucao, setSolucao] = useState('');
-  const [cargo, setCargo] = useState('');
-  const [meuUsuarioId, setMeuUsuarioId] = useState('');
+  const [tecnicoId, setTecnicoId] = useState("");
+  const [status, setStatus] = useState("");
+  const [urgencia, setUrgencia] = useState("");
+  const [prioridade, setPrioridade] = useState("");
+  const [solucao, setSolucao] = useState("");
+  const [cargo, setCargo] = useState("");
+  const [meuUsuarioId, setMeuUsuarioId] = useState("");
   const [sla, setSla] = useState<any>({});
 
   const buscarDados = async () => {
     try {
       const [resOrdens, resTecnicos] = await Promise.all([
-        api.get('/ordens'),
-        api.get('/usuarios')
+        api.get("/ordens"),
+        api.get("/usuarios"),
       ]);
       setOrdens(resOrdens.data);
       setTecnicos(resTecnicos.data);
@@ -33,35 +33,49 @@ export default function ListaChamados() {
   };
 
   useEffect(() => {
-    setCargo(localStorage.getItem('usuarioCargo') || '');
-    setMeuUsuarioId(localStorage.getItem('usuarioId') || '');
+    setCargo(localStorage.getItem("usuarioCargo") || "");
+    setMeuUsuarioId(localStorage.getItem("usuarioId") || "");
     setSla({
-      'Muito Alta': parseInt(localStorage.getItem('cfg_slaMuito') || '2'),
-      'Alta':       parseInt(localStorage.getItem('cfg_slaAlta')  || '4'),
-      'Média':      parseInt(localStorage.getItem('cfg_slaMedia') || '8'),
-      'Baixa':      parseInt(localStorage.getItem('cfg_slaBaixa') || '24'),
+      "Muito Alta": parseInt(localStorage.getItem("cfg_slaMuito") || "2"),
+      Alta: parseInt(localStorage.getItem("cfg_slaAlta") || "4"),
+      Média: parseInt(localStorage.getItem("cfg_slaMedia") || "8"),
+      Baixa: parseInt(localStorage.getItem("cfg_slaBaixa") || "24"),
     });
     buscarDados();
   }, []);
 
   // Retorna: null (sem urgência), 'ok', 'alerta' (>75%), 'vencido'
   const statusSla = (os: any) => {
-    if (os.status === 'Fechado' || !os.urgencia || !os.criado_em) return null;
+    if (os.status === "Fechado" || !os.urgencia || !os.criado_em) return null;
     const limiteHoras = sla[os.urgencia];
     if (!limiteHoras) return null;
-    const horasPassadas = (Date.now() - new Date(os.criado_em).getTime()) / 3600000;
+    const horasPassadas =
+      (Date.now() - new Date(os.criado_em).getTime()) / 3600000;
     const perc = horasPassadas / limiteHoras;
-    if (perc >= 1) return 'vencido';
-    if (perc >= 0.75) return 'alerta';
-    return 'ok';
+    if (perc >= 1) return "vencido";
+    if (perc >= 0.75) return "alerta";
+    return "ok";
   };
 
   const ordensFiltradas = ordens
-    .filter((os: any) => cargo === 'Tecnico' ? String(os.tecnico_id) === String(meuUsuarioId) : true)
-    .filter((os: any) => busca === '' || os.titulo.toLowerCase().includes(busca.toLowerCase()) || os.id.toString().includes(busca))
-    .filter((os: any) => filtroStatus === '' || os.status === filtroStatus)
-    .filter((os: any) => filtroCategoria === '' || os.categoria === filtroCategoria)
-    .filter((os: any) => filtroUrgencia === '' || os.urgencia === filtroUrgencia);
+    .filter((os: any) =>
+      cargo === "Tecnico"
+        ? String(os.tecnico_id) === String(meuUsuarioId)
+        : true,
+    )
+    .filter(
+      (os: any) =>
+        busca === "" ||
+        os.titulo.toLowerCase().includes(busca.toLowerCase()) ||
+        os.id.toString().includes(busca),
+    )
+    .filter((os: any) => filtroStatus === "" || os.status === filtroStatus)
+    .filter(
+      (os: any) => filtroCategoria === "" || os.categoria === filtroCategoria,
+    )
+    .filter(
+      (os: any) => filtroUrgencia === "" || os.urgencia === filtroUrgencia,
+    );
 
   const deletarChamado = async (id: number) => {
     if (confirm("Deseja excluir este chamado permanentemente?")) {
@@ -77,17 +91,17 @@ export default function ListaChamados() {
   const abrirModalEdicao = (os: any) => {
     setChamadoSelecionado(os);
     setStatus(os.status);
-    setTecnicoId(os.tecnico_id || '');
-    setUrgencia(os.urgencia || 'Média');
-    setPrioridade(os.prioridade || 'Média');
-    setSolucao(os.solucao || '');
+    setTecnicoId(os.tecnico_id || "");
+    setUrgencia(os.urgencia || "Média");
+    setPrioridade(os.prioridade || "Média");
+    setSolucao(os.solucao || "");
   };
 
   const salvarEdicao = async (e: any) => {
     e.preventDefault();
     try {
       const payload: any = { status, solucao };
-      if (cargo === 'Admin') {
+      if (cargo === "Admin") {
         payload.urgencia = urgencia;
         payload.prioridade = prioridade;
         payload.tecnico_id = tecnicoId || null;
@@ -101,32 +115,38 @@ export default function ListaChamados() {
   };
 
   const urgenciaCor: any = {
-    'Muito Alta': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    'Alta':       'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-    'Média':      'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-    'Baixa':      'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    "Muito Alta":
+      "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    Alta: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    Média:
+      "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    Baixa: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   };
 
   const categoriaCor: any = {
-    'Rede':           'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-    'Infraestrutura': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
-    'Acesso':         'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    Rede: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+    Infraestrutura:
+      "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400",
+    Acesso:
+      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   };
 
   const slaCor: any = {
-    'vencido': 'bg-red-500',
-    'alerta':  'bg-yellow-400',
-    'ok':      'bg-green-500',
+    vencido: "bg-red-500",
+    alerta: "bg-yellow-400",
+    ok: "bg-green-500",
   };
 
   const slaLabel: any = {
-    'vencido': '🔴 SLA Vencido',
-    'alerta':  '🟡 SLA em Risco',
-    'ok':      '🟢 No Prazo',
+    vencido: "🔴 SLA Vencido",
+    alerta: "🟡 SLA em Risco",
+    ok: "🟢 No Prazo",
   };
 
-  const selectClass = "w-full p-3 mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500";
-  const filterClass = "p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white";
+  const selectClass =
+    "w-full p-3 mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500";
+  const filterClass =
+    "p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white";
 
   return (
     <div className="p-10">
@@ -135,7 +155,9 @@ export default function ListaChamados() {
           <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">
             Gestão de Chamados
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Visualize e gerencie as ordens de serviço do sistema.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">
+            Visualize e gerencie as ordens de serviço do sistema.
+          </p>
         </div>
         <input
           type="text"
@@ -148,19 +170,31 @@ export default function ListaChamados() {
 
       {/* FILTROS */}
       <div className="flex gap-3 mb-6 flex-wrap">
-        <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className={filterClass}>
+        <select
+          value={filtroStatus}
+          onChange={(e) => setFiltroStatus(e.target.value)}
+          className={filterClass}
+        >
           <option value="">Todos os status</option>
           <option>Novo</option>
           <option>Em andamento</option>
           <option>Fechado</option>
         </select>
-        <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className={filterClass}>
+        <select
+          value={filtroCategoria}
+          onChange={(e) => setFiltroCategoria(e.target.value)}
+          className={filterClass}
+        >
           <option value="">Todas as categorias</option>
           <option>Rede</option>
           <option>Infraestrutura</option>
           <option>Acesso</option>
         </select>
-        <select value={filtroUrgencia} onChange={(e) => setFiltroUrgencia(e.target.value)} className={filterClass}>
+        <select
+          value={filtroUrgencia}
+          onChange={(e) => setFiltroUrgencia(e.target.value)}
+          className={filterClass}
+        >
           <option value="">Todas as urgências</option>
           <option>Muito Alta</option>
           <option>Alta</option>
@@ -169,7 +203,11 @@ export default function ListaChamados() {
         </select>
         {(filtroStatus || filtroCategoria || filtroUrgencia) && (
           <button
-            onClick={() => { setFiltroStatus(''); setFiltroCategoria(''); setFiltroUrgencia(''); }}
+            onClick={() => {
+              setFiltroStatus("");
+              setFiltroCategoria("");
+              setFiltroUrgencia("");
+            }}
             className="text-xs font-bold text-red-400 hover:text-red-600 px-3"
           >
             Limpar filtros
@@ -199,7 +237,10 @@ export default function ListaChamados() {
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {ordensFiltradas.length === 0 && (
               <tr>
-                <td colSpan={13} className="px-6 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
+                <td
+                  colSpan={13}
+                  className="px-6 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm"
+                >
                   Nenhum chamado encontrado.
                 </td>
               </tr>
@@ -207,70 +248,120 @@ export default function ListaChamados() {
             {ordensFiltradas.map((os: any) => {
               const slaStatus = statusSla(os);
               return (
-                <tr key={os.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${slaStatus === 'vencido' ? 'border-l-4 border-red-500' : slaStatus === 'alerta' ? 'border-l-4 border-yellow-400' : ''}`}>
-                  <td className="px-6 py-4 font-mono text-blue-600 dark:text-blue-400">#{os.id}</td>
-                  <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">{os.titulo}</td>
+                <tr
+                  key={os.id}
+                  className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${slaStatus === "vencido" ? "border-l-4 border-red-500" : slaStatus === "alerta" ? "border-l-4 border-yellow-400" : ""}`}
+                >
+                  <td className="px-6 py-4 font-mono text-blue-600 dark:text-blue-400">
+                    #{os.id}
+                  </td>
+                  <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">
+                    {os.titulo}
+                  </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${categoriaCor[os.categoria] || 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
-                      {os.categoria || '-'}
+                    <span
+                      className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${categoriaCor[os.categoria] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}
+                    >
+                      {os.categoria || "-"}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
-                    {os.localizacao || <span className="italic text-slate-300 dark:text-slate-600">Não informada</span>}
+                    {os.localizacao || (
+                      <span className="italic text-slate-300 dark:text-slate-600">
+                        Não informada
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
-                    {os.usuario?.nome || '-'}
+                    {os.usuario?.nome || "-"}
                   </td>
                   <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">
-                    {os.criado_em ? new Date(os.criado_em).toLocaleString('pt-BR') : '-'}
+                    {os.criado_em
+                      ? new Date(os.criado_em).toLocaleString("pt-BR")
+                      : "-"}
                   </td>
                   <td className="px-6 py-4">
                     {slaStatus ? (
-                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase whitespace-nowrap ${
-                        slaStatus === 'vencido' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                        slaStatus === 'alerta'  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                        'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase whitespace-nowrap ${
+                          slaStatus === "vencido"
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : slaStatus === "alerta"
+                              ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                              : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        }`}
+                      >
                         {slaLabel[slaStatus]}
                       </span>
                     ) : (
-                      <span className="text-xs text-slate-300 dark:text-slate-600 italic">—</span>
+                      <span className="text-xs text-slate-300 dark:text-slate-600 italic">
+                        —
+                      </span>
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
-                      os.status === 'Fechado'
-                        ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-                        : os.status === 'Em andamento'
-                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                        : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    }`}>
+                    <span
+                      className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
+                        os.status === "Fechado"
+                          ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                          : os.status === "Em andamento"
+                            ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      }`}
+                    >
                       {os.status}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.urgencia] || 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
-                      {os.urgencia || '-'}
+                    <span
+                      className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.urgencia] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}
+                    >
+                      {os.urgencia || "-"}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.prioridade] || 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
-                      {os.prioridade || '-'}
+                    <span
+                      className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.prioridade] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}
+                    >
+                      {os.prioridade || "-"}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
-                    {os.tecnico?.nome || <span className="italic text-slate-300 dark:text-slate-600">Não atribuído</span>}
+                    {os.tecnico?.nome || (
+                      <span className="italic text-slate-300 dark:text-slate-600">
+                        Não atribuído
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-slate-500 dark:text-slate-400 max-w-[160px]">
-                    {os.solucao
-                      ? <span className="truncate block text-xs" title={os.solucao}>{os.solucao.substring(0, 40)}{os.solucao.length > 40 ? '...' : ''}</span>
-                      : <span className="text-xs text-slate-300 dark:text-slate-600 italic">Sem solução</span>
-                    }
+                    {os.solucao ? (
+                      <span
+                        className="truncate block text-xs"
+                        title={os.solucao}
+                      >
+                        {os.solucao.substring(0, 40)}
+                        {os.solucao.length > 40 ? "..." : ""}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-300 dark:text-slate-600 italic">
+                        Sem solução
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-right whitespace-nowrap">
-                    <button onClick={() => abrirModalEdicao(os)} className="text-blue-600 font-bold mr-4 hover:underline">EDITAR</button>
-                    {cargo === 'Admin' && (
-                      <button onClick={() => deletarChamado(os.id)} className="text-red-500 font-bold hover:underline">EXCLUIR</button>
+                    <button
+                      onClick={() => abrirModalEdicao(os)}
+                      className="text-blue-600 font-bold mr-4 hover:underline"
+                    >
+                      EDITAR
+                    </button>
+                    {cargo === "Admin" && (
+                      <button
+                        onClick={() => deletarChamado(os.id)}
+                        className="text-red-500 font-bold hover:underline"
+                      >
+                        EXCLUIR
+                      </button>
                     )}
                   </td>
                 </tr>
@@ -283,25 +374,47 @@ export default function ListaChamados() {
       {chamadoSelecionado && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl">
-            <h3 className="text-xl font-black mb-2 text-slate-800 dark:text-white">Editar Chamado #{chamadoSelecionado.id}</h3>
-            <p className="text-xs text-slate-400 mb-6 uppercase tracking-widest font-bold">{chamadoSelecionado.titulo}</p>
+            <h3 className="text-xl font-black mb-2 text-slate-800 dark:text-white">
+              Editar Chamado #{chamadoSelecionado.id}
+            </h3>
+            <p className="text-xs text-slate-400 mb-6 uppercase tracking-widest font-bold">
+              {chamadoSelecionado.titulo}
+            </p>
             <form onSubmit={salvarEdicao} className="space-y-4">
-              {cargo === 'Admin' && (
+              {cargo === "Admin" && (
                 <>
                   <div>
-                    <label className="text-xs font-bold text-slate-400 uppercase">Técnico</label>
-                    <select value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)} className={selectClass}>
+                    <label className="text-xs font-bold text-slate-400 uppercase">
+                      Técnico
+                    </label>
+                    <select
+                      value={tecnicoId}
+                      onChange={(e) => setTecnicoId(e.target.value)}
+                      className={selectClass}
+                    >
                       <option value="">Não atribuído</option>
                       {tecnicos
-                        .filter((t: any) => t.cargo === 'Tecnico' || t.cargo === 'Admin')
-                        .map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)
-                      }
+                        .filter(
+                          (t: any) =>
+                            t.cargo === "Tecnico" || t.cargo === "Admin",
+                        )
+                        .map((t: any) => (
+                          <option key={t.id} value={t.id}>
+                            {t.nome}
+                          </option>
+                        ))}
                     </select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold text-slate-400 uppercase">Urgência</label>
-                      <select value={urgencia} onChange={(e) => setUrgencia(e.target.value)} className={selectClass}>
+                      <label className="text-xs font-bold text-slate-400 uppercase">
+                        Urgência
+                      </label>
+                      <select
+                        value={urgencia}
+                        onChange={(e) => setUrgencia(e.target.value)}
+                        className={selectClass}
+                      >
                         <option>Muito Alta</option>
                         <option>Alta</option>
                         <option>Média</option>
@@ -309,8 +422,14 @@ export default function ListaChamados() {
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-slate-400 uppercase">Prioridade</label>
-                      <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className={selectClass}>
+                      <label className="text-xs font-bold text-slate-400 uppercase">
+                        Prioridade
+                      </label>
+                      <select
+                        value={prioridade}
+                        onChange={(e) => setPrioridade(e.target.value)}
+                        className={selectClass}
+                      >
                         <option>Muito Alta</option>
                         <option>Alta</option>
                         <option>Média</option>
@@ -321,15 +440,23 @@ export default function ListaChamados() {
                 </>
               )}
               <div>
-                <label className="text-xs font-bold text-slate-400 uppercase">Status</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
-                    {cargo === 'Admin' && <option>Novo</option>}
-                   <option>Em andamento</option>
-                   <option>Fechado</option>
+                <label className="text-xs font-bold text-slate-400 uppercase">
+                  Status
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className={selectClass}
+                >
+                  {cargo === "Admin" && <option>Novo</option>}
+                  <option>Em andamento</option>
+                  <option>Fechado</option>
                 </select>
               </div>
               <div>
-                <label className="text-xs font-bold text-slate-400 uppercase">Solução</label>
+                <label className="text-xs font-bold text-slate-400 uppercase">
+                  Solução
+                </label>
                 <textarea
                   value={solucao}
                   onChange={(e) => setSolucao(e.target.value)}
@@ -338,8 +465,19 @@ export default function ListaChamados() {
                 />
               </div>
               <div className="flex justify-end gap-3 mt-4">
-                <button type="button" onClick={() => setChamadoSelecionado(null)} className="text-slate-400 font-bold hover:text-slate-600 dark:hover:text-slate-200">CANCELAR</button>
-                <button type="submit" className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20">SALVAR</button>
+                <button
+                  type="button"
+                  onClick={() => setChamadoSelecionado(null)}
+                  className="text-slate-400 font-bold hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  CANCELAR
+                </button>
+                <button
+                  type="submit"
+                  className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20"
+                >
+                  SALVAR
+                </button>
               </div>
             </form>
           </div>
