@@ -17,6 +17,7 @@ export default function ListaChamados() {
   const [solucao, setSolucao] = useState('');
   const [cargo, setCargo] = useState('');
   const [meuUsuarioId, setMeuUsuarioId] = useState('');
+  const [sla, setSla] = useState<any>({});
 
   const buscarDados = async () => {
     try {
@@ -34,8 +35,26 @@ export default function ListaChamados() {
   useEffect(() => {
     setCargo(localStorage.getItem('usuarioCargo') || '');
     setMeuUsuarioId(localStorage.getItem('usuarioId') || '');
+    setSla({
+      'Muito Alta': parseInt(localStorage.getItem('cfg_slaMuito') || '2'),
+      'Alta':       parseInt(localStorage.getItem('cfg_slaAlta')  || '4'),
+      'Média':      parseInt(localStorage.getItem('cfg_slaMedia') || '8'),
+      'Baixa':      parseInt(localStorage.getItem('cfg_slaBaixa') || '24'),
+    });
     buscarDados();
   }, []);
+
+  // Retorna: null (sem urgência), 'ok', 'alerta' (>75%), 'vencido'
+  const statusSla = (os: any) => {
+    if (os.status === 'Fechado' || !os.urgencia || !os.criado_em) return null;
+    const limiteHoras = sla[os.urgencia];
+    if (!limiteHoras) return null;
+    const horasPassadas = (Date.now() - new Date(os.criado_em).getTime()) / 3600000;
+    const perc = horasPassadas / limiteHoras;
+    if (perc >= 1) return 'vencido';
+    if (perc >= 0.75) return 'alerta';
+    return 'ok';
+  };
 
   const ordensFiltradas = ordens
     .filter((os: any) => cargo === 'Tecnico' ? String(os.tecnico_id) === String(meuUsuarioId) : true)
@@ -92,6 +111,18 @@ export default function ListaChamados() {
     'Rede':           'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
     'Infraestrutura': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
     'Acesso':         'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  };
+
+  const slaCor: any = {
+    'vencido': 'bg-red-500',
+    'alerta':  'bg-yellow-400',
+    'ok':      'bg-green-500',
+  };
+
+  const slaLabel: any = {
+    'vencido': '🔴 SLA Vencido',
+    'alerta':  '🟡 SLA em Risco',
+    'ok':      '🟢 No Prazo',
   };
 
   const selectClass = "w-full p-3 mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500";
@@ -155,6 +186,8 @@ export default function ListaChamados() {
               <th className="px-6 py-4">Categoria</th>
               <th className="px-6 py-4">Localização</th>
               <th className="px-6 py-4">Aberto por</th>
+              <th className="px-6 py-4">Abertura</th>
+              <th className="px-6 py-4">SLA</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4">Urgência</th>
               <th className="px-6 py-4">Prioridade</th>
@@ -166,64 +199,83 @@ export default function ListaChamados() {
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {ordensFiltradas.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-6 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
+                <td colSpan={13} className="px-6 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
                   Nenhum chamado encontrado.
                 </td>
               </tr>
             )}
-            {ordensFiltradas.map((os: any) => (
-              <tr key={os.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                <td className="px-6 py-4 font-mono text-blue-600 dark:text-blue-400">#{os.id}</td>
-                <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">{os.titulo}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${categoriaCor[os.categoria] || 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
-                    {os.categoria || '-'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
-                  {os.localizacao || <span className="italic text-slate-300 dark:text-slate-600">Não informada</span>}
-                </td>
-                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
-                  {os.usuario?.nome || '-'}
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
-                    os.status === 'Fechado'
-                      ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-                      : os.status === 'Em andamento'
-                      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                      : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  }`}>
-                    {os.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.urgencia] || 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
-                    {os.urgencia || '-'}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.prioridade] || 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
-                    {os.prioridade || '-'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
-                  {os.tecnico?.nome || <span className="italic text-slate-300 dark:text-slate-600">Não atribuído</span>}
-                </td>
-                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 max-w-[160px]">
-                  {os.solucao
-                    ? <span className="truncate block text-xs" title={os.solucao}>{os.solucao.substring(0, 40)}{os.solucao.length > 40 ? '...' : ''}</span>
-                    : <span className="text-xs text-slate-300 dark:text-slate-600 italic">Sem solução</span>
-                  }
-                </td>
-                <td className="px-6 py-4 text-right whitespace-nowrap">
-                  <button onClick={() => abrirModalEdicao(os)} className="text-blue-600 font-bold mr-4 hover:underline">EDITAR</button>
-                  {cargo === 'Admin' && (
-                    <button onClick={() => deletarChamado(os.id)} className="text-red-500 font-bold hover:underline">EXCLUIR</button>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {ordensFiltradas.map((os: any) => {
+              const slaStatus = statusSla(os);
+              return (
+                <tr key={os.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${slaStatus === 'vencido' ? 'border-l-4 border-red-500' : slaStatus === 'alerta' ? 'border-l-4 border-yellow-400' : ''}`}>
+                  <td className="px-6 py-4 font-mono text-blue-600 dark:text-blue-400">#{os.id}</td>
+                  <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">{os.titulo}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${categoriaCor[os.categoria] || 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                      {os.categoria || '-'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                    {os.localizacao || <span className="italic text-slate-300 dark:text-slate-600">Não informada</span>}
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                    {os.usuario?.nome || '-'}
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">
+                    {os.criado_em ? new Date(os.criado_em).toLocaleString('pt-BR') : '-'}
+                  </td>
+                  <td className="px-6 py-4">
+                    {slaStatus ? (
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase whitespace-nowrap ${
+                        slaStatus === 'vencido' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                        slaStatus === 'alerta'  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                        'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      }`}>
+                        {slaLabel[slaStatus]}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-300 dark:text-slate-600 italic">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
+                      os.status === 'Fechado'
+                        ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                        : os.status === 'Em andamento'
+                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    }`}>
+                      {os.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.urgencia] || 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                      {os.urgencia || '-'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.prioridade] || 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
+                      {os.prioridade || '-'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                    {os.tecnico?.nome || <span className="italic text-slate-300 dark:text-slate-600">Não atribuído</span>}
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 max-w-[160px]">
+                    {os.solucao
+                      ? <span className="truncate block text-xs" title={os.solucao}>{os.solucao.substring(0, 40)}{os.solucao.length > 40 ? '...' : ''}</span>
+                      : <span className="text-xs text-slate-300 dark:text-slate-600 italic">Sem solução</span>
+                    }
+                  </td>
+                  <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <button onClick={() => abrirModalEdicao(os)} className="text-blue-600 font-bold mr-4 hover:underline">EDITAR</button>
+                    {cargo === 'Admin' && (
+                      <button onClick={() => deletarChamado(os.id)} className="text-red-500 font-bold hover:underline">EXCLUIR</button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -234,8 +286,6 @@ export default function ListaChamados() {
             <h3 className="text-xl font-black mb-2 text-slate-800 dark:text-white">Editar Chamado #{chamadoSelecionado.id}</h3>
             <p className="text-xs text-slate-400 mb-6 uppercase tracking-widest font-bold">{chamadoSelecionado.titulo}</p>
             <form onSubmit={salvarEdicao} className="space-y-4">
-
-              {/* CAMPOS EXCLUSIVOS DO ADMIN */}
               {cargo === 'Admin' && (
                 <>
                   <div>
@@ -270,7 +320,6 @@ export default function ListaChamados() {
                   </div>
                 </>
               )}
-
               <div>
                 <label className="text-xs font-bold text-slate-400 uppercase">Status</label>
                 <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>

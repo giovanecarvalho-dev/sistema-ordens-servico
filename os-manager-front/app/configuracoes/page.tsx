@@ -15,8 +15,6 @@ export default function Configuracoes() {
 
   // Sistema
   const [nomeSistema, setNomeSistema] = useState('');
-  const [horarioInicio, setHorarioInicio] = useState('08:00');
-  const [horarioFim, setHorarioFim] = useState('18:00');
   const [slaAlta, setSlaAlta] = useState('4');
   const [slaMuito, setSlaMuito] = useState('2');
   const [slaMedia, setSlaMedia] = useState('8');
@@ -30,8 +28,6 @@ export default function Configuracoes() {
 
     // Carrega configurações do sistema do localStorage
     setNomeSistema(localStorage.getItem('cfg_nomeSistema') || 'Central de Suporte Técnico');
-    setHorarioInicio(localStorage.getItem('cfg_horarioInicio') || '08:00');
-    setHorarioFim(localStorage.getItem('cfg_horarioFim') || '18:00');
     setSlaAlta(localStorage.getItem('cfg_slaAlta') || '4');
     setSlaMuito(localStorage.getItem('cfg_slaMuito') || '2');
     setSlaMedia(localStorage.getItem('cfg_slaMedia') || '8');
@@ -66,8 +62,6 @@ export default function Configuracoes() {
   const salvarSistema = (e: any) => {
     e.preventDefault();
     localStorage.setItem('cfg_nomeSistema', nomeSistema);
-    localStorage.setItem('cfg_horarioInicio', horarioInicio);
-    localStorage.setItem('cfg_horarioFim', horarioFim);
     localStorage.setItem('cfg_slaAlta', slaAlta);
     localStorage.setItem('cfg_slaMuito', slaMuito);
     localStorage.setItem('cfg_slaMedia', slaMedia);
@@ -155,20 +149,6 @@ export default function Configuracoes() {
             <div className="space-y-2">
               <label className={labelClass}>Nome do Sistema</label>
               <input className={inputClass} value={nomeSistema} onChange={e => setNomeSistema(e.target.value)} required />
-            </div>
-
-            <div className="border-t border-slate-100 dark:border-slate-800 pt-5">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Horário de Funcionamento</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className={labelClass}>Abertura</label>
-                  <input className={inputClass} type="time" value={horarioInicio} onChange={e => setHorarioInicio(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <label className={labelClass}>Encerramento</label>
-                  <input className={inputClass} type="time" value={horarioFim} onChange={e => setHorarioFim(e.target.value)} />
-                </div>
-              </div>
             </div>
 
             <div className="border-t border-slate-100 dark:border-slate-800 pt-5">

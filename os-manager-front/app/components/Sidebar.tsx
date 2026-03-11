@@ -8,6 +8,7 @@ export default function Sidebar() {
   const [cargo, setCargo] = useState('');
   const [nome, setNome] = useState('');
   const [theme, setTheme] = useState('light');
+  const [nomeSistema, setNomeSistema] = useState('Central de Suporte Técnico');
   const router = useRouter();
   const pathname = usePathname();
 
@@ -18,6 +19,7 @@ export default function Sidebar() {
     setCargo(c);
     setNome(n);
     setTheme(savedTheme);
+    setNomeSistema(localStorage.getItem('cfg_nomeSistema') || 'Central de Suporte Técnico');
     document.documentElement.classList.toggle('dark', savedTheme === 'dark');
 
     if (!c && pathname !== '/login') {
@@ -60,7 +62,7 @@ export default function Sidebar() {
       <div className="p-6">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-black tracking-tighter text-blue-600 dark:text-blue-400 uppercase">
-            Central de Suporte Técnico
+            {nomeSistema}
           </h1>
           <button
             onClick={toggleTheme}
