@@ -323,9 +323,9 @@ export default function ListaChamados() {
               <div>
                 <label className="text-xs font-bold text-slate-400 uppercase">Status</label>
                 <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
-                  <option>Novo</option>
-                  <option>Em andamento</option>
-                  <option>Fechado</option>
+                    {cargo === 'Admin' && <option>Novo</option>}
+                   <option>Em andamento</option>
+                   <option>Fechado</option>
                 </select>
               </div>
               <div>
