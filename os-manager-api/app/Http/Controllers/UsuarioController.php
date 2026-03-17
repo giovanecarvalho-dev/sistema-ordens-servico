@@ -97,6 +97,15 @@ class UsuarioController extends Controller
         parameters: [
             new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
         ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ["cargo"],
+                properties: [
+                    new OA\Property(property: "cargo", type: "string", example: "Tecnico", enum: ["Tecnico", "Usuario", "Admin"])
+                ]
+            )
+        ),
         responses: [
             new OA\Response(response: 200, description: "Cargo atualizado"),
             new OA\Response(response: 404, description: "Usuário não encontrado")

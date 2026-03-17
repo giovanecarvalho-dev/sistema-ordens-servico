@@ -15,8 +15,6 @@ if [ ! -d "vendor" ]; then
   composer install --no-interaction --optimize-autoloader
 fi
 
-# REMOVIDO: php artisan migrate --force 
-
 # Sobe o servidor do Laravel
 echo "Iniciando servidor da API..."
 php artisan serve --host=0.0.0.0 --port=8000

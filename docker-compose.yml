@@ -1,5 +1,4 @@
 
-
 services:
   db:
     image: postgres:15
@@ -35,7 +34,7 @@ services:
 
   front:
     build:
-      context: ./os-manager-front # Caminho confirmado pela sua árvore
+      context: ./os-manager-front 
     container_name: os_front
     restart: always
     ports:
