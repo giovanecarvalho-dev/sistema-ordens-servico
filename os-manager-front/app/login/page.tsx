@@ -20,24 +20,26 @@ export default function Login() {
         setIsCadastro(false);
       } else {
         const resposta = await api.post('/login', { cpf, senha });
-        if (resposta.status === 200) {
-          const user = resposta.data.user;
-          localStorage.setItem('tecnicoLogado', cpf);
-          localStorage.setItem('usuarioId', user.id);
-          localStorage.setItem('usuarioCargo', user.cargo);
-          localStorage.setItem('usuarioNome', user.nome);
+if (resposta.status === 200) {
+    const user = resposta.data.user;
+    const token = resposta.data.token;
 
-          // Carrega o tema salvo para este usuário específico
-          const temaSalvo = localStorage.getItem(`theme_${cpf}`) || 'light';
-          localStorage.setItem('theme', temaSalvo);
-          document.documentElement.classList.toggle('dark', temaSalvo === 'dark');
+    localStorage.setItem('tecnicoLogado', cpf);
+    localStorage.setItem('usuarioId', user.id);
+    localStorage.setItem('usuarioCargo', user.cargo);
+    localStorage.setItem('usuarioNome', user.nome);
+    localStorage.setItem('token', token);
 
-          if (user.cargo === 'Usuario') {
-            router.push('/novo');
-          } else {
-            router.push('/');
-          }
-        }
+    const temaSalvo = localStorage.getItem(`theme_${cpf}`) || 'light';
+    localStorage.setItem('theme', temaSalvo);
+    document.documentElement.classList.toggle('dark', temaSalvo === 'dark');
+
+    if (user.cargo === 'Usuario') {
+        router.push('/novo');
+    } else {
+        router.push('/');
+    }
+}
       }
     } catch (err) {
       alert(isCadastro ? "Erro ao criar conta. Verifique o Back-end." : "Credenciais inválidas.");

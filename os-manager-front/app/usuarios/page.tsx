@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '../services/api';
 
 export default function UsuariosPage() {
     const [usuarios, setUsuarios] = useState([]);
@@ -9,28 +10,25 @@ export default function UsuariosPage() {
 
     useEffect(() => {
         Promise.all([
-            fetch('http://localhost:8000/api/usuarios').then(res => res.json()),
-            fetch('http://localhost:8000/api/ordens').then(res => res.json()),
+            api.get('/usuarios'),
+            api.get('/ordens'),
         ])
-        .then(([usuarios, ordens]) => {
-            setUsuarios(usuarios);
-            setOrdens(ordens);
+        .then(([resUsuarios, resOrdens]) => {
+            setUsuarios(resUsuarios.data);
+            setOrdens(resOrdens.data);
         })
         .catch((err) => console.error("Erro ao carregar dados:", err));
     }, []);
+
     const contarOrdens = (userId: number) => {
-    return ordens.filter((os: any) => 
-        os.tecnico_id != null && os.tecnico_id == userId && os.status !== 'Fechado'
-    ).length;
+        return ordens.filter((os: any) =>
+            os.tecnico_id != null && os.tecnico_id == userId && os.status !== 'Fechado'
+        ).length;
     };
 
     const alterarCargo = async (userId: number, novoCargo: string) => {
         try {
-            await fetch(`http://localhost:8000/api/usuarios/${userId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cargo: novoCargo }),
-            });
+            await api.put(`/usuarios/${userId}`, { cargo: novoCargo });
             setUsuarios((prev: any) =>
                 prev.map((u: any) => u.id === userId ? { ...u, cargo: novoCargo } : u)
             );
@@ -46,9 +44,7 @@ export default function UsuariosPage() {
         }
         if (!confirm(`Deseja excluir o usuário "${userName}" permanentemente?`)) return;
         try {
-            await fetch(`http://localhost:8000/api/usuarios/${userId}`, {
-                method: 'DELETE',
-            });
+            await api.delete(`/usuarios/${userId}`);
             setUsuarios((prev: any) => prev.filter((u: any) => u.id !== userId));
         } catch (err) {
             alert("Erro ao excluir usuário.");
@@ -66,7 +62,6 @@ export default function UsuariosPage() {
             <h1 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white">
                 Usuários Cadastrados
             </h1>
-
             <div className="bg-white dark:bg-slate-900 shadow-md rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
                 <table className="min-w-full leading-normal">
                     <thead>

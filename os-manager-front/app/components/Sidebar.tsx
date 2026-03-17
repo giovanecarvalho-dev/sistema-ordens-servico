@@ -45,13 +45,27 @@ export default function Sidebar() {
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
-  const logout = () => {
+  const logout = async () => {
     const cpf = localStorage.getItem('tecnicoLogado') || '';
     const temaAtual = localStorage.getItem('theme') || 'light';
+    const token = localStorage.getItem('token') || '';
+
+    try {
+        await fetch('http://localhost:8000/api/logout', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+    } catch (e) {
+        console.error('Erro ao fazer logout na API:', e);
+    }
+
     localStorage.clear();
     if (cpf) localStorage.setItem(`theme_${cpf}`, temaAtual);
     router.push('/login');
-  };
+};
 
   if (pathname === '/login') return null;
 
