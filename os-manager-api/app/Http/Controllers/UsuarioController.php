@@ -91,26 +91,27 @@ class UsuarioController extends Controller
     }
 
     #[OA\Put(
-        path: "/api/usuarios/{id}",
-        tags: ["Usuarios"],
-        summary: "Atualiza o cargo de um usuário",
-        parameters: [
-            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ["cargo"],
-                properties: [
-                    new OA\Property(property: "cargo", type: "string", example: "Tecnico", enum: ["Tecnico", "Usuario", "Admin"])
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: "Cargo atualizado"),
-            new OA\Response(response: 404, description: "Usuário não encontrado")
-        ]
-    )]
+    path: "/api/usuarios/{id}",
+    tags: ["Usuarios"],
+    summary: "Atualiza o cargo de um usuário",
+    parameters: [
+        new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
+    ],
+    requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["cargo"],
+            properties: [
+                new OA\Property(property: "cargo", type: "string", example: "Tecnico", enum: ["Usuario", "Tecnico", "Admin"])
+            ]
+        )
+    ),
+    responses: [
+        new OA\Response(response: 200, description: "Cargo atualizado"),
+        new OA\Response(response: 404, description: "Usuário não encontrado"),
+        new OA\Response(response: 422, description: "Erro de validação")
+    ]
+)]
     public function update(Request $request, $id)
     {
         $usuario = User::findOrFail($id);
@@ -125,19 +126,32 @@ class UsuarioController extends Controller
         return response()->json($usuario);
     }
 
-    #[OA\Put(
-        path: "/api/usuarios/{id}/perfil",
-        tags: ["Usuarios"],
-        summary: "Atualiza perfil do usuário logado",
-        parameters: [
-            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
-        ],
-        responses: [
-            new OA\Response(response: 200, description: "Perfil atualizado"),
-            new OA\Response(response: 400, description: "Senha atual incorreta"),
-            new OA\Response(response: 404, description: "Usuário não encontrado")
-        ]
-    )]
+   #[OA\Put(
+    path: "/api/usuarios/{id}/perfil",
+    tags: ["Usuarios"],
+    summary: "Atualiza perfil do usuário logado",
+    parameters: [
+        new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
+    ],
+    requestBody: new OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ["nome", "email"],
+            properties: [
+                new OA\Property(property: "nome", type: "string", example: "João Silva"),
+                new OA\Property(property: "email", type: "string", example: "joao@email.com"),
+                new OA\Property(property: "senha_atual", type: "string", example: "1234"),
+                new OA\Property(property: "nova_senha", type: "string", example: "4321"),
+            ]
+        )
+    ),
+    responses: [
+        new OA\Response(response: 200, description: "Perfil atualizado"),
+        new OA\Response(response: 400, description: "Senha atual incorreta"),
+        new OA\Response(response: 404, description: "Usuário não encontrado"),
+        new OA\Response(response: 422, description: "Erro de validação")
+    ]
+)]
     public function updatePerfil(Request $request, $id)
     {
         $usuario = User::findOrFail($id);
@@ -165,21 +179,21 @@ class UsuarioController extends Controller
     }
 
     #[OA\Delete(
-        path: "/api/usuarios/{id}",
-        tags: ["Usuarios"],
-        summary: "Remove um usuário",
-        parameters: [
-            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
-        ],
-        responses: [
-            new OA\Response(response: 200, description: "Usuário removido"),
-            new OA\Response(response: 404, description: "Usuário não encontrado")
-        ]
-    )]
-    public function destroy($id)
-    {
-        $usuario = User::findOrFail($id);
-        $usuario->delete();
-        return response()->json(['message' => 'Usuário removido com sucesso']);
-    }
+    path: "/api/usuarios/{id}",
+    tags: ["Usuarios"],
+    summary: "Remove um usuário",
+    parameters: [
+        new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
+    ],
+    responses: [
+        new OA\Response(response: 200, description: "Usuário removido"),
+        new OA\Response(response: 404, description: "Usuário não encontrado")
+    ]
+)]
+public function destroy($id)
+{
+    $usuario = User::findOrFail($id);
+    $usuario->delete();
+    return response()->json(['message' => 'Usuário removido com sucesso']);
+}
 }

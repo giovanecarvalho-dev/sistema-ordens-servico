@@ -81,37 +81,65 @@ class OrdemServicoController extends Controller
         return OrdemServico::with(['usuario', 'tecnico'])->findOrFail($id);
     }
 
-    #[OA\Put(
-        path: "/api/ordens/{id}",
-        tags: ["OrdensServico"],
-        summary: "Atualiza uma ordem",
-        parameters: [new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))],
-        responses: [new OA\Response(response: 200, description: "Ordem atualizada")]
-    )]
-    public function update(Request $request, $id)
-    {
-        $item = OrdemServico::findOrFail($id);
+   #[OA\Put(
+    path: "/api/ordens/{id}",
+    tags: ["OrdensServico"],
+    summary: "Atualiza uma ordem",
+    parameters: [new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))],
+    requestBody: new OA\RequestBody(
+        content: new OA\JsonContent(
+            properties: [
+                new OA\Property(property: "status", type: "string", example: "Em andamento", enum: ["Novo", "Em andamento", "Fechado"]),
+                new OA\Property(property: "urgencia", type: "string", example: "Alta", enum: ["Baixa", "Média", "Alta", "Muito Alta"]),
+                new OA\Property(property: "prioridade", type: "string", example: "Alta", enum: ["Baixa", "Média", "Alta", "Muito Alta"]),
+                new OA\Property(property: "tecnico_id", type: "integer", example: 2),
+                new OA\Property(property: "solucao", type: "string", example: "Problema resolvido"),
+            ]
+        )
+    ),
+    responses: [
+        new OA\Response(response: 200, description: "Ordem atualizada"),
+        new OA\Response(response: 404, description: "Ordem não encontrada"),
+        new OA\Response(response: 422, description: "Erro de validação")
+    ]
+)]
+public function update(Request $request, $id)
+{
+    $item = OrdemServico::findOrFail($id);
 
-      $item->update([
-    'status'     => $request->status     ?? $item->status,
-    'urgencia'   => $request->urgencia   ?? $item->urgencia,
-    'prioridade' => $request->prioridade ?? $item->prioridade,
-    'solucao'    => $request->solucao    ?? $item->solucao,
-    'tecnico_id' => $request->has('tecnico_id') ? ($request->tecnico_id ?: null) : $item->tecnico_id,
+    $request->validate([
+    'status'     => 'sometimes|string|in:Novo,Em andamento,Fechado',
+    'urgencia'   => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',
+    'prioridade' => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',
+    'solucao'    => 'sometimes|nullable|string|max:500',
+    'tecnico_id' => 'sometimes|nullable|exists:usuarios,id',
 ]);
-        return response()->json($item->load(['usuario', 'tecnico']), 200);
-    }
 
-    #[OA\Delete(
-        path: "/api/ordens/{id}",
-        tags: ["OrdensServico"],
-        summary: "Remove uma ordem",
-        parameters: [new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))],
-        responses: [new OA\Response(response: 200, description: "Ordem removida")]
-    )]
-    public function destroy($id)
-    {
-        OrdemServico::destroy($id);
-        return response()->json(['message' => 'Excluído com sucesso'], 200);
-    }
+    $item->update([
+        'status'     => $request->status     ?? $item->status,
+        'urgencia'   => $request->urgencia   ?? $item->urgencia,
+        'prioridade' => $request->prioridade ?? $item->prioridade,
+        'solucao'    => $request->solucao    ?? $item->solucao,
+        'tecnico_id' => $request->has('tecnico_id') ? ($request->tecnico_id ?: null) : $item->tecnico_id,
+    ]);
+
+    return response()->json($item->load(['usuario', 'tecnico']), 200);
+}
+
+   #[OA\Delete(
+    path: "/api/ordens/{id}",
+    tags: ["OrdensServico"],
+    summary: "Remove uma ordem",
+    parameters: [new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))],
+    responses: [
+        new OA\Response(response: 200, description: "Ordem removida"),
+        new OA\Response(response: 404, description: "Ordem não encontrada")
+    ]
+)]
+public function destroy($id)
+{
+    $item = OrdemServico::findOrFail($id);
+    $item->delete();
+    return response()->json(['message' => 'Excluído com sucesso'], 200);
+}
 }
