@@ -107,10 +107,10 @@ class UsuarioController extends Controller
         ]
     )]
     public function logout(Request $request)
-    {
-        $request->user()->currentAccessToken()->delete();
-        return response()->json(['message' => 'Logout realizado com sucesso']);
-    }
+{
+    $request->user()->tokens()->delete(); 
+    return response()->json(['message' => 'Todos os acessos foram revogados']);
+}
 
     #[OA\Put(
         path: "/api/usuarios/{id}",
