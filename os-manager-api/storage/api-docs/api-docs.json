@@ -22,7 +22,12 @@
                     "200": {
                         "description": "Lista recuperada com sucesso"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "post": {
                 "tags": [
@@ -39,8 +44,7 @@
                                     "titulo",
                                     "descricao",
                                     "usuario_id",
-                                    "prioridade",
-                                    "urgencia"
+                                    "localizacao"
                                 ],
                                 "properties": {
                                     "titulo": {
@@ -55,13 +59,14 @@
                                         "type": "integer",
                                         "example": 1
                                     },
-                                    "prioridade": {
+                                    "categoria": {
                                         "type": "string",
-                                        "example": "Média"
-                                    },
-                                    "urgencia": {
-                                        "type": "string",
-                                        "example": "Alta"
+                                        "enum": [
+                                            "Rede",
+                                            "Infraestrutura",
+                                            "Acesso"
+                                        ],
+                                        "example": "Rede"
                                     },
                                     "localizacao": {
                                         "type": "string",
@@ -80,7 +85,12 @@
                     "422": {
                         "description": "Erro de validação"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/ordens/{id}": {
@@ -107,7 +117,12 @@
                     "404": {
                         "description": "Ordem não encontrada"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
@@ -125,11 +140,70 @@
                         }
                     }
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Novo",
+                                            "Em andamento",
+                                            "Fechado"
+                                        ],
+                                        "example": "Em andamento"
+                                    },
+                                    "urgencia": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Baixa",
+                                            "Média",
+                                            "Alta",
+                                            "Muito Alta"
+                                        ],
+                                        "example": "Alta"
+                                    },
+                                    "prioridade": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Baixa",
+                                            "Média",
+                                            "Alta",
+                                            "Muito Alta"
+                                        ],
+                                        "example": "Alta"
+                                    },
+                                    "tecnico_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "solucao": {
+                                        "type": "string",
+                                        "example": "Problema resolvido"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "Ordem atualizada"
+                    },
+                    "404": {
+                        "description": "Ordem não encontrada"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
@@ -150,8 +224,16 @@
                 "responses": {
                     "200": {
                         "description": "Ordem removida"
+                    },
+                    "404": {
+                        "description": "Ordem não encontrada"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/usuarios": {
@@ -165,7 +247,12 @@
                     "200": {
                         "description": "Lista de usuários"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "post": {
                 "tags": [
@@ -179,16 +266,20 @@
                             "schema": {
                                 "properties": {
                                     "nome": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": "João Silva"
                                     },
                                     "cpf": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": "12345678901"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "joao@email.com"
                                     },
                                     "senha": {
-                                        "type": "string"
-                                    },
-                                    "cargo": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": "1234"
                                     }
                                 },
                                 "type": "object"
@@ -220,7 +311,7 @@
                                 "properties": {
                                     "cpf": {
                                         "type": "string",
-                                        "example": "12312312312"
+                                        "example": "12345678901"
                                     },
                                     "senha": {
                                         "type": "string",
@@ -240,6 +331,196 @@
                         "description": "Credenciais inválidas"
                     }
                 }
+            }
+        },
+        "/api/logout": {
+            "post": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Logout do usuário",
+                "operationId": "0a34c472396743ed286587cbadd19d6f",
+                "responses": {
+                    "200": {
+                        "description": "Logout realizado"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/usuarios/{id}": {
+            "put": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Atualiza o cargo de um usuário",
+                "operationId": "27ac608b6dd8b8e7c7c45b10c5210b3e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "cargo"
+                                ],
+                                "properties": {
+                                    "cargo": {
+                                        "type": "string",
+                                        "enum": [
+                                            "Usuario",
+                                            "Tecnico",
+                                            "Admin"
+                                        ],
+                                        "example": "Tecnico"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cargo atualizado"
+                    },
+                    "404": {
+                        "description": "Usuário não encontrado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Remove um usuário",
+                "operationId": "ea700764859a665afd38bb39c2842f1c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Usuário removido"
+                    },
+                    "404": {
+                        "description": "Usuário não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/usuarios/{id}/perfil": {
+            "put": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Atualiza perfil do usuário logado",
+                "operationId": "d6671a7b6025820d3fc8f3f29159cc2c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nome",
+                                    "email"
+                                ],
+                                "properties": {
+                                    "nome": {
+                                        "type": "string",
+                                        "example": "João Silva"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "joao@email.com"
+                                    },
+                                    "senha_atual": {
+                                        "type": "string",
+                                        "example": "1234"
+                                    },
+                                    "nova_senha": {
+                                        "type": "string",
+                                        "example": "4321"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Perfil atualizado"
+                    },
+                    "400": {
+                        "description": "Senha atual incorreta"
+                    },
+                    "404": {
+                        "description": "Usuário não encontrado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
             }
         }
     },

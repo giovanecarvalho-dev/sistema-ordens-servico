@@ -33,7 +33,6 @@ class UsuarioController extends Controller
                     new OA\Property(property: "cpf", type: "string", example: "12345678901"),
                     new OA\Property(property: "email", type: "string", example: "joao@email.com"),
                     new OA\Property(property: "senha", type: "string", example: "1234"),
-                    new OA\Property(property: "cargo", type: "string", example: "Usuario", enum: ["Usuario", "Tecnico", "Admin"])
                 ]
             )
         ),
@@ -49,7 +48,6 @@ class UsuarioController extends Controller
             'cpf'   => 'required|string|size:11|unique:usuarios,cpf',
             'email' => 'required|email|unique:usuarios,email',
             'senha' => 'required|string|min:4',
-            'cargo' => 'sometimes|string|in:Usuario,Tecnico,Admin',
         ]);
 
         $usuario = User::create([
@@ -87,6 +85,8 @@ class UsuarioController extends Controller
         if (!$usuario || !Hash::check($request->senha, $usuario->senha)) {
             return response()->json(['message' => 'Credenciais inválidas'], 401);
         }
+
+        $usuario->tokens()->delete(); 
 
         $token = $usuario->createToken('auth_token')->plainTextToken;
 
