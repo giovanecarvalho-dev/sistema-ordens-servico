@@ -178,6 +178,11 @@ class UsuarioController extends Controller
     )]
     public function updatePerfil(Request $request, $id)
     {
+        
+   
+    if ($request->user()->id != $id) {
+        return response()->json(['message' => 'Você não tem permissão para editar este perfil.'], 403);
+    }
         $usuario = User::findOrFail($id);
 
         $request->validate([
