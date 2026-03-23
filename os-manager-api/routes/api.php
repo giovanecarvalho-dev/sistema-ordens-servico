@@ -4,15 +4,30 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OrdemServicoController;
 use App\Http\Controllers\UsuarioController;
 
+// rotas publicas
 Route::post('/usuarios', [UsuarioController::class, 'store']);
 Route::post('/login', [UsuarioController::class, 'login']);
 
+// rotas protegidas pro token
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/usuarios', [UsuarioController::class, 'index']);
-    Route::put('/usuarios/{id}', [UsuarioController::class, 'update']);
-    Route::put('/usuarios/{id}/perfil', [UsuarioController::class, 'updatePerfil']);
-    Route::delete('/usuarios/{id}', [UsuarioController::class, 'destroy']);
+    
+    // todos tem acesso
     Route::post('/logout', [UsuarioController::class, 'logout']);
+    Route::put('/usuarios/{id}/perfil', [UsuarioController::class, 'updatePerfil']);
+    Route::post('/ordens', [OrdemServicoController::class, 'store']); 
 
-    Route::apiResource('ordens', OrdemServicoController::class);
+    // so tecnico e admin
+    Route::middleware('cargo:Tecnico,Admin')->group(function () {
+        Route::get('/ordens', [OrdemServicoController::class, 'index']); 
+        Route::get('/ordens/{id}', [OrdemServicoController::class, 'show']);
+        Route::put('/ordens/{id}', [OrdemServicoController::class, 'update']);
+    });
+
+    // somente admin
+    Route::middleware('cargo:Admin')->group(function () {
+        Route::get('/usuarios', [UsuarioController::class, 'index']);
+        Route::put('/usuarios/{id}', [UsuarioController::class, 'update']);
+        Route::delete('/usuarios/{id}', [UsuarioController::class, 'destroy']);
+        Route::delete('/ordens/{id}', [OrdemServicoController::class, 'destroy']);
+    });
 });
