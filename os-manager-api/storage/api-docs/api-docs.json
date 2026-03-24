@@ -241,11 +241,44 @@
                 "tags": [
                     "Usuarios"
                 ],
-                "summary": "Lista todos os usuários",
+                "summary": "Lista os usuários com filtros (Validação manual de Admin)",
+                "description": "Retorna a lista de usuários. Faz a verificação de Token e Cargo internamente.",
                 "operationId": "e9d4d8b419dbef04b5748fbf9ccf3881",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "ativo",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "todos",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Lista de usuários"
+                        "description": "Sucesso"
+                    },
+                    "401": {
+                        "description": "Token inválido ou ausente"
+                    },
+                    "403": {
+                        "description": "Acesso negado - Apenas Admin"
                     }
                 },
                 "security": [

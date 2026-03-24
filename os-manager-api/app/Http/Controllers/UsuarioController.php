@@ -10,16 +10,54 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: "Usuarios", description: "Endpoints para gerenciamento de usuários")]
 class UsuarioController extends Controller
 {
-    #[OA\Get(
+  #[OA\Get(
         path: "/api/usuarios",
         tags: ["Usuarios"],
-        summary: "Lista todos os usuários",
+        summary: "Lista usuários com filtros dinâmicos",
         security: [["bearerAuth" => []]],
-        responses: [new OA\Response(response: 200, description: "Lista de usuários")]
+        parameters: [
+            new OA\Parameter(
+                name: "id",
+                in: "query",
+                description: "Filtrar por ID",
+                required: false,
+                schema: new OA\Schema(type: "string") 
+            ),
+            new OA\Parameter(
+                name: "ativo",
+                in: "query",
+                description: "Filtrar por status",
+                required: false,
+                schema: new OA\Schema(type: "boolean")
+            )
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Sucesso"),
+            new OA\Response(response: 403, description: "Acesso negado")
+        ]
     )]
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(User::all());
+        // Validação manual de Admin 
+        $usuarioLogado = $request->user(); 
+        if (!$usuarioLogado || $usuarioLogado->cargo !== 'Admin') {
+            return response()->json(['message' => 'Acesso negado'], 403);
+        }
+
+        $query = User::query();
+
+        // 1. Filtro por ID 
+        if ($request->has('id')) {
+            $query->where('id', $request->query('id'));
+        }
+
+        // 2. Filtro por Status (Ativo)
+        if ($request->has('ativo')) {
+            // Se o usuário enviou o parâmetro ativo (true ou false), aplica o filtro
+            $query->where('ativo', $request->boolean('ativo'));
+        } 
+
+        return response()->json($query->get());
     }
 
     #[OA\Post(
