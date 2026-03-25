@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OrdemServicoController;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\DashboardController; // <- IMPORTANTE: Faltava importar o Dashboard
 
 // rotas publicas
 Route::post('/usuarios', [UsuarioController::class, 'store']);
@@ -29,5 +30,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/usuarios/{id}', [UsuarioController::class, 'update']);
         Route::delete('/usuarios/{id}', [UsuarioController::class, 'destroy']);
         Route::delete('/ordens/{id}', [OrdemServicoController::class, 'destroy']);
+        
+        // restaurar ordem excluida (Usando PUT conforme você pediu)
+        Route::put('/ordens/{id}/restaurar', [OrdemServicoController::class, 'restaurar']);
+
+        // dashboard
+        Route::get('/dashboard/estatisticas', [DashboardController::class, 'estatisticas']);
     });
 });

@@ -11,16 +11,59 @@
         }
     ],
     "paths": {
+        "/api/dashboard/estatisticas": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Retorna dados estatísticos do sistema",
+                "description": "Acesso restrito: Apenas usuários com cargo de Admin podem visualizar as estatísticas.",
+                "operationId": "280207991833169165fa89055b977585",
+                "responses": {
+                    "200": {
+                        "description": "Estatísticas geradas com sucesso"
+                    },
+                    "403": {
+                        "description": "Acesso negado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/ordens": {
             "get": {
                 "tags": [
                     "OrdensServico"
                 ],
-                "summary": "Lista todas as ordens de serviço",
+                "summary": "Lista e filtra as ordens de serviço",
+                "description": "Acesso para Técnicos e Admins. Filtro por ID ou Status de Ativação.",
                 "operationId": "e9954d9a37630cdf929ae616b77d4103",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "ativo",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Lista recuperada com sucesso"
+                        "description": "Lista de OS encontrada"
+                    },
+                    "403": {
+                        "description": "Acesso negado"
                     }
                 },
                 "security": [
@@ -209,7 +252,7 @@
                 "tags": [
                     "OrdensServico"
                 ],
-                "summary": "Remove uma ordem",
+                "summary": "Remove uma ordem (Manda para lixeira)",
                 "operationId": "3ddb628fff4f4f9ebafbcbbc20f22bd1",
                 "parameters": [
                     {
@@ -236,34 +279,63 @@
                 ]
             }
         },
+        "/api/ordens/{id}/restaurar": {
+            "put": {
+                "tags": [
+                    "OrdensServico"
+                ],
+                "summary": "Restaura uma ordem inativa (Apenas Admin)",
+                "description": "Muda o campo ativo de false para true.",
+                "operationId": "ffc106dcbc654bc794e51f10ed595e74",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ordem restaurada"
+                    },
+                    "403": {
+                        "description": "Acesso negado"
+                    },
+                    "404": {
+                        "description": "Ordem não encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/usuarios": {
             "get": {
                 "tags": [
                     "Usuarios"
                 ],
-                "summary": "Lista os usuários com filtros (Validação manual de Admin)",
-                "description": "Retorna a lista de usuários. Faz a verificação de Token e Cargo internamente.",
+                "summary": "Lista e filtra usuários",
                 "operationId": "e9d4d8b419dbef04b5748fbf9ccf3881",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "query",
+                        "description": "Filtrar por ID",
                         "required": false,
                         "schema": {
-                            "type": "integer"
+                            "type": "string"
                         }
                     },
                     {
                         "name": "ativo",
                         "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "boolean"
-                        }
-                    },
-                    {
-                        "name": "todos",
-                        "in": "query",
+                        "description": "Filtrar por status",
                         "required": false,
                         "schema": {
                             "type": "boolean"
@@ -274,11 +346,8 @@
                     "200": {
                         "description": "Sucesso"
                     },
-                    "401": {
-                        "description": "Token inválido ou ausente"
-                    },
                     "403": {
-                        "description": "Acesso negado - Apenas Admin"
+                        "description": "Acesso negado"
                     }
                 },
                 "security": [
@@ -565,6 +634,10 @@
         {
             "name": "Usuarios",
             "description": "Endpoints para gerenciamento de usuários"
+        },
+        {
+            "name": "Dashboard",
+            "description": "Dashboard"
         }
     ]
 }

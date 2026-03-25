@@ -12,15 +12,36 @@ class OrdemServicoController extends Controller
     #[OA\Get(
         path: "/api/ordens",
         tags: ["OrdensServico"],
-        summary: "Lista todas as ordens de serviço",
+        summary: "Lista e filtra as ordens de serviço",
+        description: "Acesso para Técnicos e Admins. Filtro por ID ou Status de Ativação.",
         security: [["bearerAuth" => []]],
-        responses: [new OA\Response(response: 200, description: "Lista recuperada com sucesso")]
+        parameters: [
+            new OA\Parameter(name: "id", in: "query", schema: new OA\Schema(type: "integer")),
+            new OA\Parameter(name: "ativo", in: "query", schema: new OA\Schema(type: "boolean"))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Lista de OS encontrada"),
+            new OA\Response(response: 403, description: "Acesso negado")
+        ]
     )]
-    public function index()
+    public function index(Request $request)
     {
-        return OrdemServico::with(['usuario', 'tecnico'])
-            ->orderBy('criado_em', 'desc')
-            ->get();
+        $usuarioLogado = $request->user(); 
+        if (!$usuarioLogado || !in_array($usuarioLogado->cargo, ['Tecnico', 'Admin'])) {
+            return response()->json(['message' => 'Acesso negado'], 403);
+        }
+
+        $query = OrdemServico::with(['usuario', 'tecnico'])->orderBy('criado_em', 'desc');
+
+        if ($request->has('id')) {
+            $query->where('id', $request->query('id'));
+        }
+
+        if ($request->has('ativo')) {
+            $query->where('ativo', $request->boolean('ativo'));
+        }
+    
+        return response()->json($query->get());
     }
 
     #[OA\Post(
@@ -48,6 +69,7 @@ class OrdemServicoController extends Controller
     )]
     public function store(Request $request)
     {
+        // Validação estrita para não quebrar o dashboard
         $request->validate([
             'titulo'      => 'required|string|max:100',
             'descricao'   => 'required|string|max:200',
@@ -63,6 +85,7 @@ class OrdemServicoController extends Controller
             'categoria'   => $request->categoria,
             'localizacao' => $request->localizacao,
             'status'      => 'Novo',
+            'ativo'       => true,
         ]);
 
         return response()->json($novaOrdem->load(['usuario', 'tecnico']), 201);
@@ -111,6 +134,7 @@ class OrdemServicoController extends Controller
     {
         $item = OrdemServico::findOrFail($id);
 
+        // Validação estrita para não salvar status inventado
         $request->validate([
             'status'     => 'sometimes|string|in:Novo,Em andamento,Fechado',
             'urgencia'   => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',
@@ -133,7 +157,7 @@ class OrdemServicoController extends Controller
     #[OA\Delete(
         path: "/api/ordens/{id}",
         tags: ["OrdensServico"],
-        summary: "Remove uma ordem",
+        summary: "Remove uma ordem (Manda para lixeira)",
         security: [["bearerAuth" => []]],
         parameters: [new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))],
         responses: [
@@ -144,7 +168,33 @@ class OrdemServicoController extends Controller
     public function destroy($id)
     {
         $item = OrdemServico::findOrFail($id);
-        $item->delete();
-        return response()->json(['message' => 'Excluído com sucesso'], 200);
+        $item->update(['ativo' => false]);
+        return response()->json(['message' => 'Enviado para a lixeira com sucesso'], 200);
+    }
+
+    #[OA\Put(
+        path: "/api/ordens/{id}/restaurar",
+        tags: ["OrdensServico"],
+        summary: "Restaura uma ordem inativa (Apenas Admin)",
+        description: "Muda o campo ativo de false para true.",
+        security: [["bearerAuth" => []]],
+        parameters: [new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))],
+        responses: [
+            new OA\Response(response: 200, description: "Ordem restaurada"),
+            new OA\Response(response: 403, description: "Acesso negado"),
+            new OA\Response(response: 404, description: "Ordem não encontrada")
+        ]
+    )]
+    public function restaurar(Request $request, $id)
+    {
+        $usuarioLogado = $request->user();
+        if (!$usuarioLogado || $usuarioLogado->cargo !== 'Admin') {
+            return response()->json(['message' => 'Acesso negado. Apenas administradores.'], 403);
+        }
+
+        $item = OrdemServico::findOrFail($id);
+        $item->update(['ativo' => true]);
+        
+        return response()->json(['message' => 'Ordem de serviço restaurada com sucesso!', 'data' => $item], 200);
     }
 }

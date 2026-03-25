@@ -13,7 +13,7 @@ class UsuarioController extends Controller
   #[OA\Get(
         path: "/api/usuarios",
         tags: ["Usuarios"],
-        summary: "Lista usuários com filtros dinâmicos",
+        summary: "Lista e filtra usuários",
         security: [["bearerAuth" => []]],
         parameters: [
             new OA\Parameter(
