@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\OrdemServico;
 use Illuminate\Support\Facades\DB;
-use OpenApi\Attributes as OA; // <- IMPORTANTE PARA O SWAGGER
+use OpenApi\Attributes as OA; 
 
 class DashboardController extends Controller
 {
@@ -22,6 +22,7 @@ class DashboardController extends Controller
     )]
     public function estatisticas(Request $request)
     {
+        dd("Teste de debug"); // Debug: Verificar o usuário autenticado
         $usuarioLogado = $request->user();
         if (!$usuarioLogado || $usuarioLogado->cargo !== 'Admin') {
             return response()->json([

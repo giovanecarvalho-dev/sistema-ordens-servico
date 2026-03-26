@@ -3,7 +3,13 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OrdemServicoController;
 use App\Http\Controllers\UsuarioController;
-use App\Http\Controllers\DashboardController; // <- IMPORTANTE: Faltava importar o Dashboard
+use App\Http\Controllers\DashboardController;
+
+
+//Rotas para testar se a api está funcionando
+Route::get('/teste', function () {
+    return response()->json(['message' => 'API funcionando!']);
+});
 
 // rotas publicas
 Route::post('/usuarios', [UsuarioController::class, 'store']);

@@ -193,9 +193,16 @@
                                         "enum": [
                                             "Novo",
                                             "Em andamento",
+                                            "Pausado",
+                                            "Aguardando Peça",
                                             "Fechado"
                                         ],
-                                        "example": "Em andamento"
+                                        "example": "Pausado"
+                                    },
+                                    "motivo_pausa": {
+                                        "type": "string",
+                                        "example": "Aguardando chegada de um novo roteador",
+                                        "nullable": true
                                     },
                                     "urgencia": {
                                         "type": "string",

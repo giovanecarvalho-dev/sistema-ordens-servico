@@ -23,9 +23,10 @@ class OrdemServico extends Model
         'categoria',
         'localizacao',
         'solucao',
-        'ativo',
         'usuario_id',
         'tecnico_id',
+        'ativo',
+        'motivo_pausa',
     ];
 
     public function usuario()

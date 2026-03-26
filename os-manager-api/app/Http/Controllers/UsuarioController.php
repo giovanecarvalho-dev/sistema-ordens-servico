@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use OpenApi\Attributes as OA;
 
+
+
 #[OA\Tag(name: "Usuarios", description: "Endpoints para gerenciamento de usuários")]
 class UsuarioController extends Controller
 {
@@ -38,7 +40,7 @@ class UsuarioController extends Controller
     )]
     public function index(Request $request)
     {
-        // Validação manual de Admin 
+        // Validação de Admin 
         $usuarioLogado = $request->user(); 
         if (!$usuarioLogado || $usuarioLogado->cargo !== 'Admin') {
             return response()->json(['message' => 'Acesso negado'], 403);

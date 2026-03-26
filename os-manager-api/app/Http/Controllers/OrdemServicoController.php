@@ -107,7 +107,7 @@ class OrdemServicoController extends Controller
         return OrdemServico::with(['usuario', 'tecnico'])->findOrFail($id);
     }
 
-    #[OA\Put(
+  #[OA\Put(
         path: "/api/ordens/{id}",
         tags: ["OrdensServico"],
         summary: "Atualiza uma ordem",
@@ -116,7 +116,8 @@ class OrdemServicoController extends Controller
         requestBody: new OA\RequestBody(
             content: new OA\JsonContent(
                 properties: [
-                    new OA\Property(property: "status", type: "string", example: "Em andamento", enum: ["Novo", "Em andamento", "Fechado"]),
+                    new OA\Property(property: "status", type: "string", example: "Pausado", enum: ["Novo", "Em andamento", "Pausado", "Aguardando Peça", "Fechado"]),
+                    new OA\Property(property: "motivo_pausa", type: "string", example: "Aguardando chegada de um novo roteador", nullable: true),
                     new OA\Property(property: "urgencia", type: "string", example: "Alta", enum: ["Baixa", "Média", "Alta", "Muito Alta"]),
                     new OA\Property(property: "prioridade", type: "string", example: "Alta", enum: ["Baixa", "Média", "Alta", "Muito Alta"]),
                     new OA\Property(property: "tecnico_id", type: "integer", example: 2),
@@ -134,21 +135,32 @@ class OrdemServicoController extends Controller
     {
         $item = OrdemServico::findOrFail($id);
 
-        // Validação estrita para não salvar status inventado
+        // Validação estrita incluindo os novos status e o motivo
         $request->validate([
-            'status'     => 'sometimes|string|in:Novo,Em andamento,Fechado',
-            'urgencia'   => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',
-            'prioridade' => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',
-            'solucao'    => 'sometimes|nullable|string|max:500',
-            'tecnico_id' => 'sometimes|nullable|exists:usuarios,id',
+            'status'       => 'sometimes|string|in:Novo,Em andamento,Pausado,Aguardando Peça,Fechado',
+            'motivo_pausa' => 'sometimes|nullable|string|max:255',
+            'urgencia'     => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',
+            'prioridade'   => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',
+            'solucao'      => 'sometimes|nullable|string|max:500',
+            'tecnico_id'   => 'sometimes|nullable|exists:usuarios,id',
         ]);
 
+        // Descobre qual será o status e o motivo finais após essa requisição
+        $statusNovo = $request->has('status') ? $request->status : $item->status;
+        $motivoNovo = $request->has('motivo_pausa') ? $request->motivo_pausa : $item->motivo_pausa;
+
+        // se o status nao for pausa, o campo motivo é limpado automaticamente
+        if (!in_array($statusNovo, ['Pausado', 'Aguardando Peça'])) {
+            $motivoNovo = null;
+        }
+
         $item->update([
-            'status'     => $request->status     ?? $item->status,
-            'urgencia'   => $request->urgencia   ?? $item->urgencia,
-            'prioridade' => $request->prioridade ?? $item->prioridade,
-            'solucao'    => $request->solucao    ?? $item->solucao,
-            'tecnico_id' => $request->has('tecnico_id') ? ($request->tecnico_id ?: null) : $item->tecnico_id,
+            'status'       => $statusNovo,
+            'motivo_pausa' => $motivoNovo,
+            'urgencia'     => $request->urgencia   ?? $item->urgencia,
+            'prioridade'   => $request->prioridade ?? $item->prioridade,
+            'solucao'      => $request->solucao    ?? $item->solucao,
+            'tecnico_id'   => $request->has('tecnico_id') ? ($request->tecnico_id ?: null) : $item->tecnico_id,
         ]);
 
         return response()->json($item->load(['usuario', 'tecnico']), 200);
