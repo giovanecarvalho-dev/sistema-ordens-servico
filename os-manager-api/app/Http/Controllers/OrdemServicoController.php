@@ -12,36 +12,52 @@ class OrdemServicoController extends Controller
     #[OA\Get(
         path: "/api/ordens",
         tags: ["OrdensServico"],
-        summary: "Lista e filtra as ordens de serviço",
-        description: "Acesso para Técnicos e Admins. Filtro por ID ou Status de Ativação.",
+        summary: "Lista e filtra as ordens de serviço (Paginado)",
+        description: "Admins veem tudo. Técnicos veem os atribuídos a eles. Usuários veem os que abriram.",
         security: [["bearerAuth" => []]],
         parameters: [
-            new OA\Parameter(name: "id", in: "query", schema: new OA\Schema(type: "integer")),
-            new OA\Parameter(name: "ativo", in: "query", schema: new OA\Schema(type: "boolean"))
+            new OA\Parameter(name: "busca", in: "query", schema: new OA\Schema(type: "string")),
+            new OA\Parameter(name: "status", in: "query", schema: new OA\Schema(type: "string")),
+            new OA\Parameter(name: "categoria", in: "query", schema: new OA\Schema(type: "string")),
+            new OA\Parameter(name: "urgencia", in: "query", schema: new OA\Schema(type: "string")),
+            new OA\Parameter(name: "page", in: "query", schema: new OA\Schema(type: "integer"))
         ],
         responses: [
-            new OA\Response(response: 200, description: "Lista de OS encontrada"),
-            new OA\Response(response: 403, description: "Acesso negado")
+            new OA\Response(response: 200, description: "Lista paginada de OS")
         ]
     )]
     public function index(Request $request)
     {
-        $usuarioLogado = $request->user(); 
-        if (!$usuarioLogado || !in_array($usuarioLogado->cargo, ['Tecnico', 'Admin'])) {
-            return response()->json(['message' => 'Acesso negado'], 403);
-        }
-
+        $user = $request->user();
+        // Iniciamos a query com os relacionamentos necessários
         $query = OrdemServico::with(['usuario', 'tecnico'])->orderBy('criado_em', 'desc');
 
-        if ($request->has('id')) {
-            $query->where('id', $request->query('id'));
+        // --- REGRA DE SEGURANÇA (Escopo) ---
+        if ($user->cargo === 'Tecnico') {
+            $query->where('tecnico_id', $user->id);
+        } elseif ($user->cargo === 'Usuario') {
+            $query->where('usuario_id', $user->id);
+        }
+        // Admin não entra no IF, logo vê tudo.
+
+        // --- FILTROS DE BUSCA ---
+        if ($request->filled('busca')) {
+            $busca = $request->busca;
+            $query->where(function($q) use ($busca) {
+                $q->where('titulo', 'like', "%{$busca}%")
+                  ->orWhere('id', $busca);
+            });
         }
 
-        if ($request->has('ativo')) {
-            $query->where('ativo', $request->boolean('ativo'));
-        }
-    
-        return response()->json($query->get());
+        if ($request->filled('status'))    $query->where('status', $request->status);
+        if ($request->filled('categoria')) $query->where('categoria', $request->categoria);
+        if ($request->filled('urgencia'))  $query->where('urgencia', $request->urgencia);
+        
+        // Apenas chamados ativos (que não estão na lixeira)
+        $query->where('ativo', true);
+
+        // Retorna 15 por página (Laravel cuida de toda a lógica de página 1, 2, 3...)
+        return response()->json($query->paginate(15));
     }
 
     #[OA\Post(
