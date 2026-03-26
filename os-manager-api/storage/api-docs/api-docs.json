@@ -241,44 +241,54 @@
                 "tags": [
                     "Usuarios"
                 ],
-                "summary": "Lista os usuários com filtros (Validação manual de Admin)",
-                "description": "Retorna a lista de usuários. Faz a verificação de Token e Cargo internamente.",
+                "summary": "Lista usuários com filtros e paginação",
                 "operationId": "e9d4d8b419dbef04b5748fbf9ccf3881",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "query",
+                        "description": "Filtrar por ID",
                         "required": false,
                         "schema": {
-                            "type": "integer"
+                            "type": "string"
                         }
                     },
                     {
                         "name": "ativo",
                         "in": "query",
+                        "description": "Filtrar por status ativo/inativo",
                         "required": false,
                         "schema": {
                             "type": "boolean"
                         }
                     },
                     {
-                        "name": "todos",
+                        "name": "page",
                         "in": "query",
+                        "description": "Número da página (padrão: 1)",
                         "required": false,
                         "schema": {
-                            "type": "boolean"
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Itens por página (padrão: 15, máximo: 100)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Sucesso"
-                    },
-                    "401": {
-                        "description": "Token inválido ou ausente"
+                        "description": "Lista paginada de usuários"
                     },
                     "403": {
-                        "description": "Acesso negado - Apenas Admin"
+                        "description": "Acesso negado"
                     }
                 },
                 "security": [
