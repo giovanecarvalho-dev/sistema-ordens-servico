@@ -6,6 +6,10 @@ import { CheckCircle } from 'lucide-react';
 export default function Configuracoes() {
   const [abaAtiva, setAbaAtiva] = useState<'perfil' | 'sistema'>('perfil');
 
+  // Dados do Usuário
+  const [usuarioId, setUsuarioId] = useState<string | null>(null);
+  const [cargo, setCargo] = useState('');
+
   // Perfil
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -21,10 +25,15 @@ export default function Configuracoes() {
   const [slaBaixa, setSlaBaixa] = useState('24');
   const [sucessoSistema, setSucessoSistema] = useState(false);
 
-  const usuarioId = typeof window !== 'undefined' ? localStorage.getItem('usuarioId') : null;
-
   useEffect(() => {
-    setNome(localStorage.getItem('usuarioNome') || '');
+    // 1. Busca APENAS os dados do usuário logado (usando a nossa nova rota)
+    api.get('/perfil').then(res => {
+      const eu = res.data;
+      setUsuarioId(eu.id);
+      setNome(eu.nome);
+      setEmail(eu.email);
+      setCargo(eu.cargo); // Guardamos o cargo para a regra de negócio visual
+    }).catch(err => console.error("Erro ao carregar perfil", err));
 
     // Carrega configurações do sistema do localStorage
     setNomeSistema(localStorage.getItem('cfg_nomeSistema') || 'Central de Suporte Técnico');
@@ -32,12 +41,6 @@ export default function Configuracoes() {
     setSlaMuito(localStorage.getItem('cfg_slaMuito') || '2');
     setSlaMedia(localStorage.getItem('cfg_slaMedia') || '8');
     setSlaBaixa(localStorage.getItem('cfg_slaBaixa') || '24');
-
-    // Busca email atual
-    api.get('/usuarios').then(res => {
-      const eu = res.data.find((u: any) => String(u.id) === String(usuarioId));
-      if (eu) setEmail(eu.email);
-    });
   }, []);
 
   const salvarPerfil = async (e: any) => {
@@ -79,24 +82,31 @@ export default function Configuracoes() {
       <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2 tracking-tight">Configurações</h2>
       <p className="text-slate-400 text-sm mb-8">Gerencie suas preferências e configurações do sistema.</p>
 
-      {/* ABAS */}
+      {/* ABAS DINÂMICAS */}
       <div className="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-800">
-        {(['perfil', 'sistema'] as const).map(aba => (
+        <button
+          onClick={() => setAbaAtiva('perfil')}
+          className={`px-4 py-2 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${
+            abaAtiva === 'perfil' ? 'border-blue-500 text-blue-500' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          Meu Perfil
+        </button>
+
+        {/* REGRA: Apenas Admins veem a aba do Sistema */}
+        {cargo === 'Admin' && (
           <button
-            key={aba}
-            onClick={() => setAbaAtiva(aba)}
+            onClick={() => setAbaAtiva('sistema')}
             className={`px-4 py-2 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${
-              abaAtiva === aba
-                ? 'border-blue-500 text-blue-500'
-                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              abaAtiva === 'sistema' ? 'border-blue-500 text-blue-500' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
             }`}
           >
-            {aba === 'perfil' ? 'Meu Perfil' : 'Sistema'}
+            Sistema
           </button>
-        ))}
+        )}
       </div>
 
-      {/* ABA PERFIL */}
+      {/* ABA PERFIL (Todos veem) */}
       {abaAtiva === 'perfil' && (
         <div className={card}>
           {sucessoPerfil && (
@@ -136,8 +146,8 @@ export default function Configuracoes() {
         </div>
       )}
 
-      {/* ABA SISTEMA */}
-      {abaAtiva === 'sistema' && (
+      {/* ABA SISTEMA (Só renderiza se for Admin) */}
+      {abaAtiva === 'sistema' && cargo === 'Admin' && (
         <div className={card}>
           {sucessoSistema && (
             <div className="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded-xl mb-6">

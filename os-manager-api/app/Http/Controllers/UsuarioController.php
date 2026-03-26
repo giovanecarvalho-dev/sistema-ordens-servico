@@ -208,6 +208,22 @@ class UsuarioController extends Controller
         return response()->json($usuario);
     }
 
+    #[OA\Get(
+        path: "/api/perfil",
+        tags: ["Usuarios"],
+        summary: "Retorna os dados do usuário logado atual",
+        security: [["bearerAuth" => []]],
+        responses: [
+            new OA\Response(response: 200, description: "Dados do usuário logado"),
+            new OA\Response(response: 401, description: "Não autenticado")
+        ]
+    )]
+    public function me(Request $request)
+    {
+        // Retorna exatamente quem é o dono do Token atual
+        return response()->json($request->user());
+    }
+
     #[OA\Put(
         path: "/api/usuarios/{id}/perfil",
         tags: ["Usuarios"],

@@ -566,6 +566,28 @@
                 ]
             }
         },
+        "/api/perfil": {
+            "get": {
+                "tags": [
+                    "Usuarios"
+                ],
+                "summary": "Retorna os dados do usuário logado atual",
+                "operationId": "23d1158de28b035c859ac04071c13dcb",
+                "responses": {
+                    "200": {
+                        "description": "Dados do usuário logado"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/usuarios/{id}/perfil": {
             "put": {
                 "tags": [

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ClipboardList, UserPlus, Users, BarChart3, Settings, LogOut, Sun, Moon } from 'lucide-react';
+import api from '../services/api'; // Certifique-se de que o caminho está correto
 
 export default function Sidebar() {
   const [cargo, setCargo] = useState('');
@@ -16,21 +17,26 @@ export default function Sidebar() {
     const c = localStorage.getItem('usuarioCargo') || '';
     const n = localStorage.getItem('usuarioNome') || '';
     const savedTheme = localStorage.getItem('theme') || 'light';
+    
     setCargo(c);
     setNome(n);
     setTheme(savedTheme);
     setNomeSistema(localStorage.getItem('cfg_nomeSistema') || 'Central de Suporte Técnico');
     document.documentElement.classList.toggle('dark', savedTheme === 'dark');
 
+    // PROTEÇÃO DE ROTAS ATUALIZADA
     if (!c && pathname !== '/login') {
       router.push('/login');
       return;
     }
 
-    if (c === 'Usuario' && pathname !== '/novo' && pathname !== '/login') {
+    // Se for Usuário Comum, ele só pode acessar "Novo Chamado" E "Configurações"
+    const rotasPermitidasUsuario = ['/novo', '/configuracoes'];
+    if (c === 'Usuario' && !rotasPermitidasUsuario.includes(pathname) && pathname !== '/login') {
       router.push('/novo');
     }
 
+    // Se for Técnico, não acessa usuários nem estatísticas
     if (c === 'Tecnico' && (pathname === '/usuarios' || pathname === '/estatisticas')) {
       router.push('/');
     }
@@ -38,82 +44,59 @@ export default function Sidebar() {
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
-    const cpf = localStorage.getItem('tecnicoLogado') || '';
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
-    if (cpf) localStorage.setItem(`theme_${cpf}`, newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
   const logout = async () => {
-    const cpf = localStorage.getItem('tecnicoLogado') || '';
-    const temaAtual = localStorage.getItem('theme') || 'light';
-    const token = localStorage.getItem('token') || '';
-
     try {
-        await fetch('http://localhost:8000/api/logout', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-        });
+        await api.post('/logout'); // Usando sua instância da API que já tem o token
     } catch (e) {
-        console.error('Erro ao fazer logout na API:', e);
+        console.error('Erro ao fazer logout:', e);
     }
-
     localStorage.clear();
-    if (cpf) localStorage.setItem(`theme_${cpf}`, temaAtual);
     router.push('/login');
-};
+  };
 
   if (pathname === '/login') return null;
 
   const linkClass = "flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all font-medium text-slate-600 dark:text-slate-300";
+  const activeClass = "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400";
 
   return (
     <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed h-full shadow-sm">
       <div className="p-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-black tracking-tighter text-blue-600 dark:text-blue-400 uppercase">
+          <h1 className="text-xl font-black tracking-tighter text-blue-600 dark:text-blue-400 uppercase leading-tight">
             {nomeSistema}
           </h1>
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0"
-            title={theme === 'light' ? 'Ativar Modo Escuro' : 'Ativar Modo Claro'}
-          >
-            {theme === 'light' ? (
-              <Moon className="text-slate-600" size={18} />
-            ) : (
-              <Sun className="text-yellow-400" size={18} />
-            )}
+          <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            {theme === 'light' ? <Moon size={18} /> : <Sun className="text-yellow-400" size={18} />}
           </button>
         </div>
-        {nome && (
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 truncate">
-            {nome} — <span className="font-bold text-blue-500">{cargo}</span>
-          </p>
-        )}
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 uppercase font-bold tracking-widest">
+          {nome} — <span className="text-blue-500">{cargo}</span>
+        </p>
       </div>
 
       <nav className="flex-1 px-4 space-y-1">
-        <Link href="/novo" className={linkClass}>
+        <Link href="/novo" className={`${linkClass} ${pathname === '/novo' ? activeClass : ''}`}>
           <UserPlus size={18} /> Criar Chamado
         </Link>
 
         {(cargo === 'Tecnico' || cargo === 'Admin') && (
-          <Link href="/" className={linkClass}>
+          <Link href="/" className={`${linkClass} ${pathname === '/' ? activeClass : ''}`}>
             <ClipboardList size={18} /> Chamados
           </Link>
         )}
 
         {cargo === 'Admin' && (
           <>
-            <Link href="/usuarios" className={linkClass}>
+            <Link href="/usuarios" className={`${linkClass} ${pathname === '/usuarios' ? activeClass : ''}`}>
               <Users size={18} /> Usuários
             </Link>
-            <Link href="/estatisticas" className={linkClass}>
+            <Link href="/estatisticas" className={`${linkClass} ${pathname === '/estatisticas' ? activeClass : ''}`}>
               <BarChart3 size={18} /> Estatísticas
             </Link>
           </>
@@ -121,12 +104,12 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-1">
-        {cargo === 'Admin' && (
-          <Link href="/configuracoes" className={`${linkClass} text-slate-500 dark:text-slate-400`}>
-            <Settings size={18} /> Configurações
-          </Link>
-        )}
-        <button onClick={logout} className="flex items-center gap-3 p-3 w-full text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all rounded-xl font-medium">
+        {/* AGORA VISÍVEL PARA TODOS */}
+        <Link href="/configuracoes" className={`${linkClass} ${pathname === '/configuracoes' ? activeClass : ''}`}>
+          <Settings size={18} /> Configurações
+        </Link>
+        
+        <button onClick={logout} className="flex items-center gap-3 p-3 w-full text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all rounded-xl font-medium text-sm">
           <LogOut size={18} /> Sair
         </button>
       </div>

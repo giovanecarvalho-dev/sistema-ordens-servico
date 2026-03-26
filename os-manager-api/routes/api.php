@@ -30,6 +30,8 @@ Route::post('/login', [UsuarioController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     
     // todos tem acesso
+
+    Route::get('/perfil', [UsuarioController::class, 'me']);
     Route::post('/logout', [UsuarioController::class, 'logout']);
     Route::put('/usuarios/{id}/perfil', [UsuarioController::class, 'updatePerfil']);
     Route::post('/ordens', [OrdemServicoController::class, 'store']); 
