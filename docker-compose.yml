@@ -11,6 +11,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d os_manager_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api:
     build:
@@ -19,9 +24,12 @@ services:
     container_name: os_api
     restart: always
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"
+    volumes:
+      - ./os-manager-api:/var/www
     environment:
       DB_CONNECTION: pgsql
       DB_HOST: db
@@ -37,6 +45,8 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    volumes:
+      - ./os-manager-front:/app
     depends_on:
       - api
 
