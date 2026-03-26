@@ -15,7 +15,7 @@ class UsuarioController extends Controller
   #[OA\Get(
         path: "/api/usuarios",
         tags: ["Usuarios"],
-        summary: "Lista e filtra usuários",
+        summary: "Lista usuários com filtros e paginação",
         security: [["bearerAuth" => []]],
         parameters: [
             new OA\Parameter(
@@ -23,18 +23,32 @@ class UsuarioController extends Controller
                 in: "query",
                 description: "Filtrar por ID",
                 required: false,
-                schema: new OA\Schema(type: "string") 
+                schema: new OA\Schema(type: "string")
             ),
             new OA\Parameter(
                 name: "ativo",
                 in: "query",
-                description: "Filtrar por status",
+                description: "Filtrar por status ativo/inativo",
                 required: false,
                 schema: new OA\Schema(type: "boolean")
+            ),
+            new OA\Parameter(
+                name: "page",
+                in: "query",
+                description: "Número da página (padrão: 1)",
+                required: false,
+                schema: new OA\Schema(type: "integer", default: 1)
+            ),
+            new OA\Parameter(
+                name: "per_page",
+                in: "query",
+                description: "Itens por página (padrão: 15, máximo: 100)",
+                required: false,
+                schema: new OA\Schema(type: "integer", default: 15)
             )
         ],
         responses: [
-            new OA\Response(response: 200, description: "Sucesso"),
+            new OA\Response(response: 200, description: "Lista paginada de usuários"),
             new OA\Response(response: 403, description: "Acesso negado")
         ]
     )]
@@ -48,18 +62,20 @@ class UsuarioController extends Controller
 
         $query = User::query();
 
-        // 1. Filtro por ID 
+        // Filtro por ID
         if ($request->has('id')) {
             $query->where('id', $request->query('id'));
         }
 
-        // 2. Filtro por Status (Ativo)
+        // Filtro por Status (Ativo/Inativo)
         if ($request->has('ativo')) {
-            // Se o usuário enviou o parâmetro ativo (true ou false), aplica o filtro
             $query->where('ativo', $request->boolean('ativo'));
-        } 
+        }
 
-        return response()->json($query->get());
+        // Paginação com limite máximo de 100 itens por página
+        $perPage = min((int) $request->query('per_page', 15), 100);
+
+        return response()->json($query->orderBy('nome')->paginate($perPage));
     }
 
     #[OA\Post(

@@ -12,6 +12,23 @@ Route::get('/teste', function () {
 });
 
 // rotas publicas
+Route::get('/health', function () {
+    try {
+        \DB::connection()->getPdo();
+        return response()->json([
+            'status' => 'OK',
+            'database' => 'Connected',
+            'timestamp' => now()->toDateTimeString()
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'ERROR',
+            'database' => 'Disconnected',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+});
+
 Route::post('/usuarios', [UsuarioController::class, 'store']);
 Route::post('/login', [UsuarioController::class, 'login']);
 
