@@ -320,7 +320,7 @@
                 "tags": [
                     "Usuarios"
                 ],
-                "summary": "Lista usuários com filtros e paginação",
+                "summary": "Lista usuários com filtros, paginação e contagem de ordens",
                 "operationId": "e9d4d8b419dbef04b5748fbf9ccf3881",
                 "parameters": [
                     {

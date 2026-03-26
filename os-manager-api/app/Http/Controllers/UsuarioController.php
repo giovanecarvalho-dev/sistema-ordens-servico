@@ -13,7 +13,7 @@ class UsuarioController extends Controller
   #[OA\Get(
         path: "/api/usuarios",
         tags: ["Usuarios"],
-        summary: "Lista usuários com filtros e paginação",
+        summary: "Lista usuários com filtros, paginação e contagem de ordens",
         security: [["bearerAuth" => []]],
         parameters: [
             new OA\Parameter(
@@ -52,7 +52,7 @@ class UsuarioController extends Controller
     )]
     public function index(Request $request)
     {
-        // Validação manual de Admin 
+        // Validação de Admin 
         $usuarioLogado = $request->user(); 
         if (!$usuarioLogado || $usuarioLogado->cargo !== 'Admin') {
             return response()->json(['message' => 'Acesso negado'], 403);
@@ -60,13 +60,18 @@ class UsuarioController extends Controller
 
         $query = User::query();
 
+        // conta as ordens ativas direto no banco
+        $query->withCount(['ordens as ordens_ativas' => function ($q) {
+            $q->where('status', '!=', 'Fechado');
+        }]);
+
         // Filtro por ID
-        if ($request->has('id')) {
+        if ($request->has('id') && $request->query('id') != '') {
             $query->where('id', $request->query('id'));
         }
 
         // Filtro por Status (Ativo/Inativo)
-        if ($request->has('ativo')) {
+        if ($request->has('ativo') && $request->query('ativo') != '') {
             $query->where('ativo', $request->boolean('ativo'));
         }
 

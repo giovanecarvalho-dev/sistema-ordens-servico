@@ -41,4 +41,8 @@ class User extends Authenticatable
             'senha' => 'hashed',
         ];
     }
+    public function ordens()
+    {
+        return $this->hasMany(OrdemServico::class, 'tecnico_id');
+    }
 }

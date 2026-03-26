@@ -5,26 +5,30 @@ import api from '../services/api';
 
 export default function UsuariosPage() {
     const [usuarios, setUsuarios] = useState([]);
-    const [ordens, setOrdens] = useState([]);
+    const [paginaAtual, setPaginaAtual] = useState(1);
+    const [totalPaginas, setTotalPaginas] = useState(1);
+    const [filtroId, setFiltroId] = useState('');
+    
     const meuId = typeof window !== 'undefined' ? localStorage.getItem('usuarioId') : null;
 
-    useEffect(() => {
-        Promise.all([
-            api.get('/usuarios'),
-            api.get('/ordens'),
-        ])
-        .then(([resUsuarios, resOrdens]) => {
-            setUsuarios(resUsuarios.data);
-            setOrdens(resOrdens.data);
-        })
-        .catch((err) => console.error("Erro ao carregar dados:", err));
-    }, []);
+    // Busca os dados da API já filtrados, paginados e calculados pelo back-end!
+    const buscarUsuarios = () => {
+        const params = new URLSearchParams({ page: paginaAtual.toString(), per_page: '15' });
+        if (filtroId) params.append('id', filtroId);
 
-    const contarOrdens = (userId: number) => {
-        return ordens.filter((os: any) =>
-            os.tecnico_id != null && os.tecnico_id == userId && os.status !== 'Fechado'
-        ).length;
+        api.get(`/usuarios?${params.toString()}`)
+            .then((res) => {
+                // Acessa o .data interno por causa da paginação do Laravel
+                setUsuarios(res.data.data || []); 
+                setTotalPaginas(res.data.last_page || 1);
+            })
+            .catch((err) => console.error("Erro ao carregar dados:", err));
     };
+
+    // Recarrega sempre que a página mudar
+    useEffect(() => {
+        buscarUsuarios();
+    }, [paginaAtual]);
 
     const alterarCargo = async (userId: number, novoCargo: string) => {
         try {
@@ -45,7 +49,7 @@ export default function UsuariosPage() {
         if (!confirm(`Deseja excluir o usuário "${userName}" permanentemente?`)) return;
         try {
             await api.delete(`/usuarios/${userId}`);
-            setUsuarios((prev: any) => prev.filter((u: any) => u.id !== userId));
+            buscarUsuarios(); // Recarrega a lista para atualizar a paginação corretamente
         } catch (err) {
             alert("Erro ao excluir usuário.");
         }
@@ -62,6 +66,24 @@ export default function UsuariosPage() {
             <h1 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white">
                 Usuários Cadastrados
             </h1>
+
+            {/* Nova barra de Filtros */}
+            <div className="mb-6 flex gap-4">
+                <input 
+                    type="number" 
+                    placeholder="Filtrar por ID" 
+                    value={filtroId}
+                    onChange={(e) => setFiltroId(e.target.value)}
+                    className="p-2 border rounded border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+                <button 
+                    onClick={() => { setPaginaAtual(1); buscarUsuarios(); }}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+                >
+                    Buscar
+                </button>
+            </div>
+
             <div className="bg-white dark:bg-slate-900 shadow-md rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
                 <table className="min-w-full leading-normal">
                     <thead>
@@ -69,7 +91,6 @@ export default function UsuariosPage() {
                             <th className="px-5 py-4 border-b border-slate-700 text-center w-20">ID</th>
                             <th className="px-5 py-4 border-b border-slate-700">Nome</th>
                             <th className="px-5 py-4 border-b border-slate-700">CPF</th>
-                            <th className="px-5 py-4 border-b border-slate-700">Data de Cadastro</th>
                             <th className="px-5 py-4 border-b border-slate-700 text-center">Ordens Ativas</th>
                             <th className="px-5 py-4 border-b border-slate-700 text-center">Cargo</th>
                             <th className="px-5 py-4 border-b border-slate-700 text-center">Ações</th>
@@ -77,8 +98,10 @@ export default function UsuariosPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {usuarios.map((user: any) => {
-                            const ordensAtivas = contarOrdens(user.id);
                             const ehEuMesmo = String(user.id) === String(meuId);
+                            // Agora lê direto da propriedade mágica do Laravel!
+                            const ordensAtivas = user.ordens_ativas || 0; 
+
                             return (
                                 <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                                     <td className="px-5 py-4 text-sm text-center font-mono text-blue-600 dark:text-blue-400">
@@ -89,11 +112,6 @@ export default function UsuariosPage() {
                                     </td>
                                     <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-300">
                                         {user.cpf}
-                                    </td>
-                                    <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-300">
-                                        {user.criado_em
-                                            ? new Date(user.criado_em).toLocaleDateString('pt-BR')
-                                            : 'Sem data'}
                                     </td>
                                     <td className="px-5 py-4 text-sm text-center">
                                         <span className={`px-3 py-1 rounded-full text-xs font-black ${
@@ -140,6 +158,27 @@ export default function UsuariosPage() {
                         })}
                     </tbody>
                 </table>
+            </div>
+            
+            {/* Controles de Paginação */}
+            <div className="mt-6 flex justify-between items-center text-slate-600 dark:text-slate-400 font-medium">
+                <span>Página {paginaAtual} de {totalPaginas}</span>
+                <div className="flex gap-2">
+                    <button 
+                        disabled={paginaAtual === 1}
+                        onClick={() => setPaginaAtual(prev => prev - 1)}
+                        className="px-4 py-2 bg-slate-200 dark:bg-slate-800 rounded hover:bg-slate-300 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
+                    >
+                        Anterior
+                    </button>
+                    <button 
+                        disabled={paginaAtual >= totalPaginas}
+                        onClick={() => setPaginaAtual(prev => prev + 1)}
+                        className="px-4 py-2 bg-slate-200 dark:bg-slate-800 rounded hover:bg-slate-300 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
+                    >
+                        Próxima
+                    </button>
+                </div>
             </div>
         </div>
     );
