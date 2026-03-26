@@ -52,13 +52,13 @@ class OrdemServicoController extends Controller
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ["titulo", "descricao", "usuario_id", "localizacao"],
+                required: ["titulo", "descricao", "localizacao"], 
                 properties: [
                     new OA\Property(property: "titulo", type: "string", example: "Troca de toner"),
                     new OA\Property(property: "descricao", type: "string", example: "Impressora do RH sem tinta"),
-                    new OA\Property(property: "usuario_id", type: "integer", example: 1),
                     new OA\Property(property: "categoria", type: "string", example: "Rede", enum: ["Rede", "Infraestrutura", "Acesso"]),
                     new OA\Property(property: "localizacao", type: "string", example: "Bloco A - Sala 10"),
+                    new OA\Property(property: "usuario_id", type: "integer", description: "Opcional. Apenas Admins/Técnicos podem abrir em nome de outros.", example: 2),
                 ]
             )
         ),
@@ -69,19 +69,29 @@ class OrdemServicoController extends Controller
     )]
     public function store(Request $request)
     {
-        // Validação estrita para não quebrar o dashboard
+        $usuarioLogado = $request->user();
+
+        // Validação: Aceita o usuario_id opcionalmente, verificando se ele existe na tabela
         $request->validate([
             'titulo'      => 'required|string|max:100',
             'descricao'   => 'required|string|max:200',
-            'usuario_id'  => 'required|exists:usuarios,id',
             'categoria'   => 'nullable|string|in:Rede,Infraestrutura,Acesso',
             'localizacao' => 'required|string|max:120',
+            'usuario_id'  => 'sometimes|nullable|exists:usuarios,id',
         ]);
+
+        // REGRA DE SEGURANÇA E CONTROLE:
+        $idDonoDoChamado = $usuarioLogado->id; // Por padrão, o dono é quem está logado
+
+        // Se quem está logado for Admin ou Técnico E enviou um ID no formulário, alteramos o dono
+        if (in_array($usuarioLogado->cargo, ['Admin', 'Tecnico']) && $request->filled('usuario_id')) {
+            $idDonoDoChamado = $request->usuario_id;
+        }
 
         $novaOrdem = OrdemServico::create([
             'titulo'      => $request->titulo,
             'descricao'   => $request->descricao,
-            'usuario_id'  => $request->usuario_id,
+            'usuario_id'  => $idDonoDoChamado, 
             'categoria'   => $request->categoria,
             'localizacao' => $request->localizacao,
             'status'      => 'Novo',
@@ -134,7 +144,6 @@ class OrdemServicoController extends Controller
     {
         $item = OrdemServico::findOrFail($id);
 
-        // Validação estrita para não salvar status inventado
         $request->validate([
             'status'     => 'sometimes|string|in:Novo,Em andamento,Fechado',
             'urgencia'   => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',

@@ -86,7 +86,6 @@
                                 "required": [
                                     "titulo",
                                     "descricao",
-                                    "usuario_id",
                                     "localizacao"
                                 ],
                                 "properties": {
@@ -97,10 +96,6 @@
                                     "descricao": {
                                         "type": "string",
                                         "example": "Impressora do RH sem tinta"
-                                    },
-                                    "usuario_id": {
-                                        "type": "integer",
-                                        "example": 1
                                     },
                                     "categoria": {
                                         "type": "string",
@@ -114,6 +109,11 @@
                                     "localizacao": {
                                         "type": "string",
                                         "example": "Bloco A - Sala 10"
+                                    },
+                                    "usuario_id": {
+                                        "description": "Opcional. Apenas Admins/Técnicos podem abrir em nome de outros.",
+                                        "type": "integer",
+                                        "example": 2
                                     }
                                 },
                                 "type": "object"

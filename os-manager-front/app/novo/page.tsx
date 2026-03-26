@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../services/api';
 import { useRouter } from 'next/navigation';
 import { CheckCircle } from 'lucide-react';
@@ -13,29 +13,21 @@ export default function NovoChamado() {
   const [descricao, setDescricao] = useState('');
   const [categoria, setCategoria] = useState('Rede');
   const [localizacao, setLocalizacao] = useState('');
-  const [usuarioId, setUsuarioId] = useState('');
   const [sucesso, setSucesso] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    const id = localStorage.getItem('usuarioId');
-    if (id) {
-      setUsuarioId(id);
-    } else {
-      api.get('/usuarios')
-        .then(res => { if (res.data.length > 0) setUsuarioId(res.data[0].id); })
-        .catch(() => console.error("Erro ao carregar usuários"));
-    }
-  }, []);
 
   const salvarOrdem = async (e: any) => {
     e.preventDefault();
     try {
+      // O Front-end agora envia APENAS os dados do formulário.
+      // A identidade (Token) vai automaticamente nos bastidores pelo axios/api.
       await api.post('/ordens', {
-        titulo, descricao, categoria, localizacao,
-        usuario_id: usuarioId,
-        status: 'Novo',
+        titulo, 
+        descricao, 
+        categoria, 
+        localizacao
       });
+      
       setSucesso(true);
       setTimeout(() => {
         setSucesso(false);
