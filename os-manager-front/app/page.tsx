@@ -40,10 +40,10 @@ export default function ListaChamados() {
 
       // Monta os parâmetros que serão enviados na URL da API (O Back-end que lute agora!)
       const params: any = {};
-      if (busca) params.busca = busca;
-      if (filtroStatus) params.status = filtroStatus;
-      if (filtroCategoria) params.categoria = filtroCategoria;
-      if (filtroUrgencia) params.urgencia = filtroUrgencia;
+      if (filtros.busca) params.busca = filtros.busca;
+      if (filtros.status) params.status = filtros.status;
+      if (filtros.categoria) params.categoria = filtros.categoria;
+      if (filtros.urgencia) params.urgencia = filtros.urgencia;
       
       // Se for técnico, a API do Laravel vai filtrar apenas os chamados dele
       if (currentCargo === "Tecnico" && currentUserId) {
@@ -73,11 +73,11 @@ export default function ListaChamados() {
   // Refaz a busca na API toda vez que um filtro mudar (com um leve atraso para a digitação)
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      buscarDados();
+      buscarChamados();
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [busca, filtroStatus, filtroCategoria, filtroUrgencia]);
+  }, [filtros, buscarChamados]);
 
   // Função "Burra" do Front-end: Apenas reflete o que o Back-end enviou
   const statusSla = (os: any) => {

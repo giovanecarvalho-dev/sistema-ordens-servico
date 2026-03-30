@@ -39,8 +39,6 @@
                 "tags": [
                     "OrdensServico"
                 ],
-                "summary": "Lista e filtra as ordens de serviço (Autenticado)",
-                "description": "Retorna a lista completa de OS com filtros avançados. O campo 'ativo' filtra entre chamados ativos e desativados.",
                 "summary": "Lista e filtra as ordens de serviço (Paginado)",
                 "description": "Admins veem tudo. Técnicos veem os atribuídos a eles. Usuários veem os que abriram.",
                 "operationId": "e9954d9a37630cdf929ae616b77d4103",
