@@ -22,7 +22,6 @@ class DashboardController extends Controller
     )]
     public function estatisticas(Request $request)
     {
-        dd("Teste de debug"); // Debug: Verificar o usuário autenticado
         $usuarioLogado = $request->user();
         if (!$usuarioLogado || $usuarioLogado->cargo !== 'Admin') {
             return response()->json([
