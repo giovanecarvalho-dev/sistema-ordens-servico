@@ -12,11 +12,6 @@ use Illuminate\Support\Str;
 class UserFactory extends Factory
 {
     /**
-     * The current password being used by the factory.
-     */
-    protected static ?string $password;
-
-    /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
@@ -24,21 +19,44 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'nome'   => fake('pt_BR')->name(),
+            'cpf'    => fake('pt_BR')->cpf(false), // apenas dígitos
+            'email'  => fake('pt_BR')->unique()->safeEmail(),
+            'senha'  => Hash::make('senha1234'),
+            'cargo'  => fake()->randomElement(['usuario', 'tecnico']),
+            'ativo'  => true,
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
+    /** Usuário comum (solicitante) */
+    public function usuario(): static
     {
         return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
+            'cargo' => 'usuario',
+        ]);
+    }
+
+    /** Técnico responsável por atender as OSs */
+    public function tecnico(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'cargo' => 'tecnico',
+        ]);
+    }
+
+    /** Administrador do sistema */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'cargo' => 'admin',
+        ]);
+    }
+
+    /** Usuário inativo */
+    public function inativo(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'ativo' => false,
         ]);
     }
 }
