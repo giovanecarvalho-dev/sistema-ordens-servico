@@ -18,58 +18,76 @@ export default function ListaChamados() {
 
   // --- 2. ESTADOS DE INTERFACE E MODAL ---
   const [tecnicos, setTecnicos] = useState([]);
+  
   const [chamadoSelecionado, setChamadoSelecionado] = useState<any>(null);
   const [tecnicoId, setTecnicoId] = useState("");
   const [status, setStatus] = useState("");
   const [urgencia, setUrgencia] = useState("");
   const [prioridade, setPrioridade] = useState("");
   const [solucao, setSolucao] = useState("");
+  const [motivoPausa, setMotivoPausa] = useState("");
+  
   const [cargo, setCargo] = useState("");
-  const [sla, setSla] = useState<any>({});
+  const [meuUsuarioId, setMeuUsuarioId] = useState("");
 
   // --- 3. BUSCA DE DADOS (SERVER-SIDE) ---
   const buscarChamados = useCallback(async () => {
     setCarregando(true);
     try {
-      const { data } = await api.get("/ordens", { params: filtros });
-      setOrdens(data.data); // Itens da página atual
-      setMeta(data);      // Dados da paginação (total, last_page)
+      // Pega os dados locais direto na hora do request para garantir que não vai vazio
+      const currentCargo = localStorage.getItem("usuarioCargo") || "";
+      const currentUserId = localStorage.getItem("usuarioId") || "";
+
+      // Monta os parâmetros que serão enviados na URL da API (O Back-end que lute agora!)
+      const params: any = {};
+      if (busca) params.busca = busca;
+      if (filtroStatus) params.status = filtroStatus;
+      if (filtroCategoria) params.categoria = filtroCategoria;
+      if (filtroUrgencia) params.urgencia = filtroUrgencia;
+      
+      // Se for técnico, a API do Laravel vai filtrar apenas os chamados dele
+      if (currentCargo === "Tecnico" && currentUserId) {
+        params.tecnico_id = currentUserId;
+      }
+
+      const [resOrdens, resTecnicos] = await Promise.all([
+        api.get("/ordens", { params }), 
+        api.get("/usuarios"),
+      ]);
+      
+      const listaOrdens = Array.isArray(resOrdens.data) ? resOrdens.data : (resOrdens.data?.data || []);
+      const listaTecnicos = Array.isArray(resTecnicos.data) ? resTecnicos.data : (resTecnicos.data?.data || []);
+      
+      setOrdens(listaOrdens);
+      setTecnicos(listaTecnicos);
     } catch (err) {
-      console.error("Erro ao carregar chamados");
-    } finally {
-      setCarregando(false);
+      console.error("Erro ao carregar dados", err);
     }
   }, [filtros]);
 
   useEffect(() => {
-    const carregarIniciais = async () => {
-      const c = localStorage.getItem("usuarioCargo") || "";
-      setCargo(c);
-      setSla({
-        "Muito Alta": parseInt(localStorage.getItem("cfg_slaMuito") || "2"),
-        Alta: parseInt(localStorage.getItem("cfg_slaAlta") || "4"),
-        Média: parseInt(localStorage.getItem("cfg_slaMedia") || "8"),
-        Baixa: parseInt(localStorage.getItem("cfg_slaBaixa") || "24"),
-      });
-
-      try {
-        const res = await api.get("/usuarios");
-        // CORREÇÃO DO ERRO: Verifica se a lista está em res.data ou res.data.data
-        const listaBruta = Array.isArray(res.data) ? res.data : res.data.data;
-        if (listaBruta) {
-          setTecnicos(listaBruta.filter((u: any) => u.cargo !== 'Usuario'));
-        }
-      } catch (e) { console.error("Erro ao carregar técnicos:", e); }
-    };
-    carregarIniciais();
+    setCargo(localStorage.getItem("usuarioCargo") || "");
+    setMeuUsuarioId(localStorage.getItem("usuarioId") || "");
   }, []);
 
+  // Refaz a busca na API toda vez que um filtro mudar (com um leve atraso para a digitação)
   useEffect(() => {
-    const timer = setTimeout(buscarChamados, 300);
-    return () => clearTimeout(timer);
-  }, [buscarChamados]);
+    const delayDebounceFn = setTimeout(() => {
+      buscarDados();
+    }, 500);
 
-  // --- 4. FUNÇÕES DE AÇÃO ---
+    return () => clearTimeout(delayDebounceFn);
+  }, [busca, filtroStatus, filtroCategoria, filtroUrgencia]);
+
+  // Função "Burra" do Front-end: Apenas reflete o que o Back-end enviou
+  const statusSla = (os: any) => {
+    if (os.status === "Fechado") return null;
+    if (["Pausado", "Aguardando Peça"].includes(os.status)) return "pausado"; 
+    
+    // O Laravel envia essa propriedade pronta com 'ok', 'alerta' ou 'vencido'
+    return os.status_sla || null; 
+  };
+
   const deletarChamado = async (id: number) => {
     if (confirm("Deseja excluir este chamado permanentemente?")) {
       try {
@@ -86,33 +104,29 @@ export default function ListaChamados() {
     setUrgencia(os.urgencia || "Média");
     setPrioridade(os.prioridade || "Média");
     setSolucao(os.solucao || "");
+    setMotivoPausa(os.motivo_pausa || "");
   };
 
   const salvarEdicao = async (e: any) => {
     e.preventDefault();
     try {
-      const payload: any = { status, solucao };
+      const payload: any = { 
+        status, 
+        solucao,
+        motivo_pausa: ["Pausado", "Aguardando Peça"].includes(status) ? motivoPausa : null
+      };
+      
       if (cargo === "Admin") {
         payload.urgencia = urgencia;
         payload.prioridade = prioridade;
         payload.tecnico_id = tecnicoId || null;
       }
+
       await api.put(`/ordens/${chamadoSelecionado.id}`, payload);
       setChamadoSelecionado(null);
-      buscarChamados();
-    } catch (err) { alert("Erro ao atualizar."); }
-  };
-
-  // --- 5. HELPERS DE ESTILO (PADRÃO ORIGINAL) ---
-  const statusSla = (os: any) => {
-    if (os.status === "Fechado" || !os.urgencia || !os.criado_em) return null;
-    const limiteHoras = sla[os.urgencia];
-    if (!limiteHoras) return null;
-    const horasPassadas = (Date.now() - new Date(os.criado_em).getTime()) / 3600000;
-    const perc = horasPassadas / limiteHoras;
-    if (perc >= 1) return "vencido";
-    if (perc >= 0.75) return "alerta";
-    return "ok";
+    } catch (err) {
+      alert("Erro ao atualizar a ordem de serviço.");
+    }
   };
 
   const urgenciaCor: any = {
@@ -128,9 +142,17 @@ export default function ListaChamados() {
     Acesso: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   };
 
-  const slaLabel: any = { vencido: "🔴 SLA Vencido", alerta: "🟡 SLA em Risco", ok: "🟢 No Prazo" };
-  const filterClass = "p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white";
+  const slaLabel: any = {
+    vencido: "🔴 SLA Vencido",
+    alerta: "🟡 SLA em Risco",
+    ok: "🟢 No Prazo",
+    pausado: "⏸️ SLA Suspenso",
+  };
+
   const selectClass = "w-full p-3 mt-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500";
+  const filterClass = "p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white";
+
+  const ordensExibicao = Array.isArray(ordens) ? ordens : [];
 
   return (
     <div className="p-10">
@@ -148,12 +170,13 @@ export default function ListaChamados() {
         />
       </div>
 
-      {/* FILTROS */}
       <div className="flex gap-3 mb-6 flex-wrap">
         <select value={filtros.status} onChange={(e) => setFiltros({...filtros, status: e.target.value, page: 1})} className={filterClass}>
           <option value="">Todos os status</option>
           <option>Novo</option>
           <option>Em andamento</option>
+          <option>Pausado</option>
+          <option>Aguardando Peça</option>
           <option>Fechado</option>
         </select>
         <select value={filtros.categoria} onChange={(e) => setFiltros({...filtros, categoria: e.target.value, page: 1})} className={filterClass}>
@@ -189,6 +212,7 @@ export default function ListaChamados() {
               <th className="px-6 py-4">Abertura</th>
               <th className="px-6 py-4">SLA</th>
               <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4">Motivo Pausa</th>
               <th className="px-6 py-4">Urgência</th>
               <th className="px-6 py-4">Prioridade</th>
               <th className="px-6 py-4">Técnico</th>
@@ -197,61 +221,109 @@ export default function ListaChamados() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {carregando ? (
-              <tr><td colSpan={13} className="px-6 py-10 text-center text-slate-400 animate-pulse uppercase font-black text-xs tracking-widest">Sincronizando com o servidor...</td></tr>
-            ) : ordens.length === 0 ? (
-              <tr><td colSpan={13} className="px-6 py-10 text-center text-slate-400 italic">Nenhum chamado encontrado.</td></tr>
-            ) : (
-              ordens.map((os: any) => {
-                const slaStatus = statusSla(os);
-                return (
-                  <tr key={os.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${slaStatus === "vencido" ? "border-l-4 border-red-500" : slaStatus === "alerta" ? "border-l-4 border-yellow-400" : ""}`}>
-                    <td className="px-6 py-4 font-mono text-blue-600 dark:text-blue-400">#{os.id}</td>
-                    <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">{os.titulo}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${categoriaCor[os.categoria] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
-                        {os.categoria || "-"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">{os.localizacao || "—"}</td>
-                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">{os.usuario?.nome || "-"}</td>
-                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-[10px] whitespace-nowrap">
-                      {os.criado_em ? new Date(os.criado_em).toLocaleString("pt-BR") : "-"}
-                    </td>
-                    <td className="px-6 py-4">
-                      {slaStatus ? (
-                        <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase whitespace-nowrap ${slaStatus === "vencido" ? "bg-red-100 text-red-700" : slaStatus === "alerta" ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700"}`}>
-                          {slaLabel[slaStatus]}
-                        </span>
-                      ) : <span className="text-xs text-slate-300 italic">—</span>}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${os.status === "Fechado" ? "bg-slate-100 text-slate-500" : os.status === "Em andamento" ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700"}`}>
-                        {os.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.urgencia] || "bg-slate-100 text-slate-400"}`}>
-                        {os.urgencia || "-"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.prioridade] || "bg-slate-100 text-slate-400"}`}>
-                        {os.prioridade || "-"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-500 text-xs whitespace-nowrap">{os.tecnico?.nome || "Não atribuído"}</td>
-                    <td className="px-6 py-4 text-slate-500 text-[10px] max-w-[120px] truncate" title={os.solucao}>{os.solucao || "—"}</td>
-                    <td className="px-6 py-4 text-right whitespace-nowrap">
-                      <button onClick={() => abrirModalEdicao(os)} className="text-blue-600 font-bold mr-4 hover:underline text-xs">EDITAR</button>
-                      {cargo === "Admin" && (
-                        <button onClick={() => deletarChamado(os.id)} className="text-red-500 font-bold hover:underline text-xs">EXCLUIR</button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
+            {ordensExibicao.length === 0 && (
+              <tr>
+                <td colSpan={14} className="px-6 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
+                  Nenhum chamado encontrado.
+                </td>
+              </tr>
             )}
+            {ordensExibicao.map((os: any) => {
+              const slaStatus = statusSla(os);
+              return (
+                <tr
+                  key={os.id}
+                  className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${slaStatus === "vencido" ? "border-l-4 border-red-500" : slaStatus === "alerta" ? "border-l-4 border-yellow-400" : ""}`}
+                >
+                  <td className="px-6 py-4 font-mono text-blue-600 dark:text-blue-400">#{os.id}</td>
+                  <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">{os.titulo}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${categoriaCor[os.categoria] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                      {os.categoria || "-"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                    {os.localizacao || <span className="italic text-slate-300 dark:text-slate-600">Não informada</span>}
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                    {os.usuario?.nome || "-"}
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">
+                    {os.criado_em ? new Date(os.criado_em).toLocaleString("pt-BR") : "-"}
+                  </td>
+                  <td className="px-6 py-4">
+                    {slaStatus ? (
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase whitespace-nowrap ${
+                          slaStatus === "vencido" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : slaStatus === "alerta" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            : slaStatus === "pausado" ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        }`}
+                      >
+                        {slaLabel[slaStatus]}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-300 dark:text-slate-600 italic">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
+                        os.status === "Fechado" ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                          : ["Pausado", "Aguardando Peça"].includes(os.status) ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                          : os.status === "Em andamento" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                          : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      }`}
+                    >
+                      {os.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 max-w-[150px]">
+                    {os.motivo_pausa ? (
+                      <span 
+                        className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 block truncate" 
+                        title={os.motivo_pausa}
+                      >
+                        {os.motivo_pausa}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-300 dark:text-slate-600 italic">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.urgencia] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                      {os.urgencia || "-"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.prioridade] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                      {os.prioridade || "-"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                    {os.tecnico?.nome || <span className="italic text-slate-300 dark:text-slate-600">Não atribuído</span>}
+                  </td>
+                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 max-w-[160px]">
+                    {os.solucao ? (
+                      <span className="truncate block text-xs" title={os.solucao}>
+                        {os.solucao.substring(0, 40)}{os.solucao.length > 40 ? "..." : ""}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-300 dark:text-slate-600 italic">Sem solução</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <button onClick={() => abrirModalEdicao(os)} className="text-blue-600 font-bold mr-4 hover:underline">
+                      EDITAR
+                    </button>
+                    {cargo === "Admin" && (
+                      <button onClick={() => deletarChamado(os.id)} className="text-red-500 font-bold hover:underline">
+                        EXCLUIR
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -281,47 +353,80 @@ export default function ListaChamados() {
 
       {/* MODAL DE EDIÇÃO */}
       {chamadoSelecionado && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <h3 className="text-xl font-black mb-1 text-slate-800 dark:text-white uppercase tracking-tighter">Editar Chamado #{chamadoSelecionado.id}</h3>
-            <p className="text-xs text-slate-400 mb-6 font-bold uppercase truncate">{chamadoSelecionado.titulo}</p>
-            
+            <h3 className="text-xl font-black mb-2 text-slate-800 dark:text-white">
+              Editar Chamado #{chamadoSelecionado.id}
+            </h3>
+            <p className="text-xs text-slate-400 mb-6 uppercase tracking-widest font-bold">
+              {chamadoSelecionado.titulo}
+            </p>
             <form onSubmit={salvarEdicao} className="space-y-4">
               {cargo === "Admin" && (
                 <>
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Técnico Responsável</label>
+                    <label className="text-xs font-bold text-slate-400 uppercase">Técnico</label>
                     <select value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)} className={selectClass}>
                       <option value="">Não atribuído</option>
-                      {tecnicos.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                      {tecnicos.filter((t: any) => t.cargo === "Tecnico" || t.cargo === "Admin").map((t: any) => (
+                        <option key={t.id} value={t.id}>{t.nome}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Urgência</label>
+                      <label className="text-xs font-bold text-slate-400 uppercase">Urgência</label>
                       <select value={urgencia} onChange={(e) => setUrgencia(e.target.value)} className={selectClass}>
-                        <option>Muito Alta</option><option>Alta</option><option>Média</option><option>Baixa</option>
+                        <option>Muito Alta</option>
+                        <option>Alta</option>
+                        <option>Média</option>
+                        <option>Baixa</option>
                       </select>
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Prioridade</label>
+                      <label className="text-xs font-bold text-slate-400 uppercase">Prioridade</label>
                       <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className={selectClass}>
-                        <option>Muito Alta</option><option>Alta</option><option>Média</option><option>Baixa</option>
+                        <option>Muito Alta</option>
+                        <option>Alta</option>
+                        <option>Média</option>
+                        <option>Baixa</option>
                       </select>
                     </div>
                   </div>
                 </>
               )}
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status do Atendimento</label>
+                <label className="text-xs font-bold text-slate-400 uppercase">Status</label>
                 <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
                   {cargo === "Admin" && <option>Novo</option>}
                   <option>Em andamento</option>
+                  <option>Pausado</option>
+                  <option>Aguardando Peça</option>
                   <option>Fechado</option>
                 </select>
               </div>
+
+              {["Pausado", "Aguardando Peça"].includes(status) && (
+                <div className="mt-2">
+                  <label className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase">
+                    Motivo da Pausa / Pendência
+                  </label>
+                  <textarea
+                    value={motivoPausa}
+                    onChange={(e) => setMotivoPausa(e.target.value)}
+                    maxLength={150}
+                    placeholder="Descreva o motivo (máx 150 caracteres)..."
+                    className={`${selectClass} h-20 resize-none border-indigo-200 dark:border-indigo-900/50 focus:ring-indigo-500`}
+                    required
+                  />
+                  <div className="text-[10px] text-right text-slate-400 mt-1">
+                    {motivoPausa.length}/150
+                  </div>
+                </div>
+              )}
+
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solução / Notas Técnica</label>
+                <label className="text-xs font-bold text-slate-400 uppercase">Solução</label>
                 <textarea
                   value={solucao}
                   onChange={(e) => setSolucao(e.target.value)}
@@ -329,9 +434,13 @@ export default function ListaChamados() {
                   className={`${selectClass} h-28 resize-none text-sm`}
                 />
               </div>
-              <div className="flex justify-end gap-4 pt-4">
-                <button type="button" onClick={() => setChamadoSelecionado(null)} className="text-xs font-black text-slate-400 hover:text-slate-600">CANCELAR</button>
-                <button type="submit" className="bg-blue-600 text-white px-8 py-3 rounded-xl font-black text-xs shadow-lg shadow-blue-500/20 uppercase tracking-widest">SALVAR ALTERAÇÕES</button>
+              <div className="flex justify-end gap-3 mt-4">
+                <button type="button" onClick={() => setChamadoSelecionado(null)} className="text-slate-400 font-bold hover:text-slate-600 dark:hover:text-slate-200">
+                  CANCELAR
+                </button>
+                <button type="submit" className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20">
+                  SALVAR
+                </button>
               </div>
             </form>
           </div>

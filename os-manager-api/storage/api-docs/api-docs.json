@@ -39,6 +39,8 @@
                 "tags": [
                     "OrdensServico"
                 ],
+                "summary": "Lista e filtra as ordens de serviço (Autenticado)",
+                "description": "Retorna a lista completa de OS com filtros avançados. O campo 'ativo' filtra entre chamados ativos e desativados.",
                 "summary": "Lista e filtra as ordens de serviço (Paginado)",
                 "description": "Admins veem tudo. Técnicos veem os atribuídos a eles. Usuários veem os que abriram.",
                 "operationId": "e9954d9a37630cdf929ae616b77d4103",
@@ -67,6 +69,8 @@
                     {
                         "name": "urgencia",
                         "in": "query",
+                        "description": "Buscar por ID específico",
+                        "required": false,
                         "schema": {
                             "type": "string"
                         }
@@ -74,6 +78,72 @@
                     {
                         "name": "page",
                         "in": "query",
+                        "description": "Filtrar por ativos/inativos",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "default": true
+                        }
+                    },
+                    {
+                        "name": "busca",
+                        "in": "query",
+                        "description": "Busca por título ou descrição",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Selecionar Status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Novo",
+                                "Em andamento",
+                                "Pausado",
+                                "Aguardando Peça",
+                                "Fechado"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "categoria",
+                        "in": "query",
+                        "description": "Selecionar Categoria",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Rede",
+                                "Infraestrutura",
+                                "Acesso"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "urgencia",
+                        "in": "query",
+                        "description": "Selecionar Urgência",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Baixa",
+                                "Média",
+                                "Alta",
+                                "Muito Alta"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "tecnico_id",
+                        "in": "query",
+                        "description": "Filtrar por técnico responsável",
+                        "required": false,
                         "schema": {
                             "type": "integer"
                         }
@@ -189,7 +259,8 @@
                 "tags": [
                     "OrdensServico"
                 ],
-                "summary": "Atualiza uma ordem",
+                "summary": "Atualiza uma ordem (Com Cálculo Inteligente de SLA e Pausa)",
+                "description": "Atualiza a OS. Se o status mudar para 'Pausado', o sistema registra o início da pausa. Se sair da pausa, o sistema calcula os minutos em que ficou pausado, soma ao histórico da OS (para descontar do SLA) e limpa o motivo.",
                 "operationId": "a5d619b2ba267041732114d8f319a67f",
                 "parameters": [
                     {
@@ -211,9 +282,17 @@
                                         "enum": [
                                             "Novo",
                                             "Em andamento",
+                                            "Pausado",
+                                            "Aguardando Peça",
                                             "Fechado"
                                         ],
-                                        "example": "Em andamento"
+                                        "example": "Pausado"
+                                    },
+                                    "motivo_pausa": {
+                                        "type": "string",
+                                        "maxLength": 150,
+                                        "example": "Aguardando peça do fornecedor",
+                                        "nullable": true
                                     },
                                     "urgencia": {
                                         "type": "string",
@@ -241,7 +320,8 @@
                                     },
                                     "solucao": {
                                         "type": "string",
-                                        "example": "Problema resolvido"
+                                        "example": "Peça trocada com sucesso",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -251,7 +331,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Ordem atualizada"
+                        "description": "Ordem atualizada com sucesso"
                     },
                     "404": {
                         "description": "Ordem não encontrada"

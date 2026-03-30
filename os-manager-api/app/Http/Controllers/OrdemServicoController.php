@@ -12,15 +12,35 @@ class OrdemServicoController extends Controller
     #[OA\Get(
         path: "/api/ordens",
         tags: ["OrdensServico"],
-        summary: "Lista e filtra as ordens de serviço (Paginado)",
-        description: "Admins veem tudo. Técnicos veem os atribuídos a eles. Usuários veem os que abriram.",
+        summary: "Lista e filtra as ordens de serviço (Autenticado)",
+        description: "Retorna a lista completa de OS com filtros avançados. O campo 'ativo' filtra entre chamados ativos e desativados.",
         security: [["bearerAuth" => []]],
         parameters: [
-            new OA\Parameter(name: "busca", in: "query", schema: new OA\Schema(type: "string")),
-            new OA\Parameter(name: "status", in: "query", schema: new OA\Schema(type: "string")),
-            new OA\Parameter(name: "categoria", in: "query", schema: new OA\Schema(type: "string")),
-            new OA\Parameter(name: "urgencia", in: "query", schema: new OA\Schema(type: "string")),
-            new OA\Parameter(name: "page", in: "query", schema: new OA\Schema(type: "integer"))
+            new OA\Parameter(name: "id", in: "query", description: "Buscar por ID específico", required: false, schema: new OA\Schema(type: "integer")),
+            new OA\Parameter(name: "ativo", in: "query", description: "Filtrar por ativos/inativos", required: false, schema: new OA\Schema(type: "boolean", default: true)),
+            new OA\Parameter(name: "busca", in: "query", description: "Busca por título ou descrição", required: false, schema: new OA\Schema(type: "string")),
+            new OA\Parameter(
+                name: "status", 
+                in: "query", 
+                description: "Selecionar Status", 
+                required: false, 
+                schema: new OA\Schema(type: "string", enum: ["Novo", "Em andamento", "Pausado", "Aguardando Peça", "Fechado"])
+            ),
+            new OA\Parameter(
+                name: "categoria", 
+                in: "query", 
+                description: "Selecionar Categoria", 
+                required: false, 
+                schema: new OA\Schema(type: "string", enum: ["Rede", "Infraestrutura", "Acesso"])
+            ),
+            new OA\Parameter(
+                name: "urgencia", 
+                in: "query", 
+                description: "Selecionar Urgência", 
+                required: false, 
+                schema: new OA\Schema(type: "string", enum: ["Baixa", "Média", "Alta", "Muito Alta"])
+            ),
+            new OA\Parameter(name: "tecnico_id", in: "query", description: "Filtrar por técnico responsável", required: false, schema: new OA\Schema(type: "integer"))
         ],
         responses: [
             new OA\Response(response: 200, description: "Lista paginada de OS")
@@ -28,36 +48,24 @@ class OrdemServicoController extends Controller
     )]
     public function index(Request $request)
     {
-        $user = $request->user();
-        // Iniciamos a query com os relacionamentos necessários
-        $query = OrdemServico::with(['usuario', 'tecnico'])->orderBy('criado_em', 'desc');
+        $query = OrdemServico::with(['usuario', 'tecnico']);
 
-        // --- REGRA DE SEGURANÇA (Escopo) ---
-        if ($user->cargo === 'Tecnico') {
-            $query->where('tecnico_id', $user->id);
-        } elseif ($user->cargo === 'Usuario') {
-            $query->where('usuario_id', $user->id);
-        }
-        // Admin não entra no IF, logo vê tudo.
-
-        // --- FILTROS DE BUSCA ---
-        if ($request->filled('busca')) {
-            $busca = $request->busca;
-            $query->where(function($q) use ($busca) {
-                $q->where('titulo', 'like', "%{$busca}%")
-                  ->orWhere('id', $busca);
-            });
+        // Mantendo o filtro de 'ativo' que já existia
+        if ($request->has('ativo')) {
+            $query->where('ativo', filter_var($request->ativo, FILTER_VALIDATE_BOOLEAN));
         }
 
-        if ($request->filled('status'))    $query->where('status', $request->status);
+        if ($request->filled('id')) $query->where('id', $request->id);
+        if ($request->filled('status')) $query->where('status', $request->status);
         if ($request->filled('categoria')) $query->where('categoria', $request->categoria);
-        if ($request->filled('urgencia'))  $query->where('urgencia', $request->urgencia);
+        if ($request->filled('urgencia')) $query->where('urgencia', $request->urgencia);
+        if ($request->filled('tecnico_id')) $query->where('tecnico_id', $request->tecnico_id);
         
-        // Apenas chamados ativos (que não estão na lixeira)
-        $query->where('ativo', true);
+        if ($request->filled('busca')) {
+            $query->where('titulo', 'ilike', '%' . $request->busca . '%');
+        }
 
-        // Retorna 15 por página (Laravel cuida de toda a lógica de página 1, 2, 3...)
-        return response()->json($query->paginate(15));
+        return response()->json($query->orderBy('id', 'desc')->get(), 200);
     }
 
     #[OA\Post(
@@ -133,25 +141,29 @@ class OrdemServicoController extends Controller
         return OrdemServico::with(['usuario', 'tecnico'])->findOrFail($id);
     }
 
-    #[OA\Put(
+ #[OA\Put(
         path: "/api/ordens/{id}",
         tags: ["OrdensServico"],
-        summary: "Atualiza uma ordem",
+        summary: "Atualiza uma ordem (Com Cálculo Inteligente de SLA e Pausa)",
+        description: "Atualiza a OS. Se o status mudar para 'Pausado', o sistema registra o início da pausa. Se sair da pausa, o sistema calcula os minutos em que ficou pausado, soma ao histórico da OS (para descontar do SLA) e limpa o motivo.",
         security: [["bearerAuth" => []]],
-        parameters: [new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))],
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
+        ],
         requestBody: new OA\RequestBody(
             content: new OA\JsonContent(
                 properties: [
-                    new OA\Property(property: "status", type: "string", example: "Em andamento", enum: ["Novo", "Em andamento", "Fechado"]),
+                    new OA\Property(property: "status", type: "string", example: "Pausado", enum: ["Novo", "Em andamento", "Pausado", "Aguardando Peça", "Fechado"]),
+                    new OA\Property(property: "motivo_pausa", type: "string", maxLength: 150, example: "Aguardando peça do fornecedor", nullable: true),
                     new OA\Property(property: "urgencia", type: "string", example: "Alta", enum: ["Baixa", "Média", "Alta", "Muito Alta"]),
                     new OA\Property(property: "prioridade", type: "string", example: "Alta", enum: ["Baixa", "Média", "Alta", "Muito Alta"]),
                     new OA\Property(property: "tecnico_id", type: "integer", example: 2),
-                    new OA\Property(property: "solucao", type: "string", example: "Problema resolvido"),
+                    new OA\Property(property: "solucao", type: "string", example: "Peça trocada com sucesso", nullable: true),
                 ]
             )
         ),
         responses: [
-            new OA\Response(response: 200, description: "Ordem atualizada"),
+            new OA\Response(response: 200, description: "Ordem atualizada com sucesso"),
             new OA\Response(response: 404, description: "Ordem não encontrada"),
             new OA\Response(response: 422, description: "Erro de validação")
         ]
@@ -161,20 +173,42 @@ class OrdemServicoController extends Controller
         $item = OrdemServico::findOrFail($id);
 
         $request->validate([
-            'status'     => 'sometimes|string|in:Novo,Em andamento,Fechado',
-            'urgencia'   => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',
-            'prioridade' => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',
-            'solucao'    => 'sometimes|nullable|string|max:500',
-            'tecnico_id' => 'sometimes|nullable|exists:usuarios,id',
+            'status'       => 'sometimes|string|in:Novo,Em andamento,Pausado,Aguardando Peça,Fechado',
+            'motivo_pausa' => 'sometimes|nullable|string|max:150',
+            'urgencia'     => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',
+            'prioridade'   => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',
+            'solucao'      => 'sometimes|nullable|string|max:500',
+            'tecnico_id'   => 'sometimes|nullable|exists:usuarios,id',
         ]);
 
-        $item->update([
-            'status'     => $request->status     ?? $item->status,
-            'urgencia'   => $request->urgencia   ?? $item->urgencia,
-            'prioridade' => $request->prioridade ?? $item->prioridade,
-            'solucao'    => $request->solucao    ?? $item->solucao,
-            'tecnico_id' => $request->has('tecnico_id') ? ($request->tecnico_id ?: null) : $item->tecnico_id,
-        ]);
+        $statusAntigo = $item->status;
+        $statusNovo = $request->status ?? $item->status;
+        $dados = $request->all();
+
+        $estadosPausa = ['Pausado', 'Aguardando Peça'];
+
+        
+        if (in_array($statusNovo, $estadosPausa)) {
+           
+            if (!in_array($statusAntigo, $estadosPausa)) {
+                $dados['pausado_em'] = now();
+            }
+        } else {
+     
+            if (in_array($statusAntigo, $estadosPausa) && $item->pausado_em) {
+                // Calcula os minutos passados desde o início dessa pausa até agora
+                $minutosDestaPausa = now()->diffInMinutes($item->pausado_em);
+                
+
+                $dados['tempo_pausado_minutos'] = ($item->tempo_pausado_minutos ?? 0) + $minutosDestaPausa;
+                
+                // Limpa os campos de controle, pois a pausa acabou
+                $dados['pausado_em'] = null;
+                $dados['motivo_pausa'] = null;
+            }
+        }
+
+        $item->update($dados);
 
         return response()->json($item->load(['usuario', 'tecnico']), 200);
     }

@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use OpenApi\Attributes as OA;
 
+
+
 #[OA\Tag(name: "Usuarios", description: "Endpoints para gerenciamento de usuários")]
 class UsuarioController extends Controller
 {
