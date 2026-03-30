@@ -39,31 +39,49 @@
                 "tags": [
                     "OrdensServico"
                 ],
-                "summary": "Lista e filtra as ordens de serviço",
-                "description": "Acesso para Técnicos e Admins. Filtro por ID ou Status de Ativação.",
+                "summary": "Lista e filtra as ordens de serviço (Paginado)",
+                "description": "Admins veem tudo. Técnicos veem os atribuídos a eles. Usuários veem os que abriram.",
                 "operationId": "e9954d9a37630cdf929ae616b77d4103",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "busca",
                         "in": "query",
                         "schema": {
-                            "type": "integer"
+                            "type": "string"
                         }
                     },
                     {
-                        "name": "ativo",
+                        "name": "status",
                         "in": "query",
                         "schema": {
-                            "type": "boolean"
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "categoria",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "urgencia",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Lista de OS encontrada"
-                    },
-                    "403": {
-                        "description": "Acesso negado"
+                        "description": "Lista paginada de OS"
                     }
                 },
                 "security": [
