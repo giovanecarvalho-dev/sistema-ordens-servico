@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 class UserFactory extends Factory
 {
     /**
-     * Define the model's default state.
+     * Define o estado padrão do modelo.
      *
      * @return array<string, mixed>
      */
