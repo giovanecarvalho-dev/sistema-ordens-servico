@@ -54,12 +54,6 @@ class UsuarioController extends Controller
     )]
     public function index(Request $request)
     {
-        // Validação de Admin 
-        $usuarioLogado = $request->user(); 
-        if (!$usuarioLogado || $usuarioLogado->cargo !== 'Admin') {
-            return response()->json(['message' => 'Acesso negado'], 403);
-        }
-
         $query = User::query();
 
         // conta as ordens ativas direto no banco
@@ -141,15 +135,21 @@ class UsuarioController extends Controller
     )]
     public function login(Request $request)
     {
-        $usuario = User::where('cpf', $request->cpf)->first();
+        // 1. Montamos as credenciais. 
+        // MÁGICA AQUI: Passamos 'cpf' normalmente, mas o Laravel exige que a chave 
+        // da senha no array se chame 'password' para ele saber que precisa aplicar o Hash.
+        $credenciais = [
+            'cpf' => $request->cpf,
+            'password' => $request->senha
+        ];
 
-        if (!$usuario || !Hash::check($request->senha, $usuario->senha)) {
+        // 2. O attempt() busca o CPF no banco, checa a senha e já gera o Token JWT!
+        if (!$token = auth('api')->attempt($credenciais)) {
             return response()->json(['message' => 'Credenciais inválidas'], 401);
         }
 
-        $usuario->tokens()->delete(); 
-
-        $token = $usuario->createToken('auth_token')->plainTextToken;
+        // 3. Pegamos os dados do usuário que acabou de logar
+        $usuario = auth('api')->user();
 
         return response()->json([
             'user'  => $usuario,
@@ -168,10 +168,13 @@ class UsuarioController extends Controller
         ]
     )]
     public function logout(Request $request)
-{
-    $request->user()->tokens()->delete(); 
-    return response()->json(['message' => 'Todos os acessos foram revogados']);
-}
+    {
+        // O JWT pega o token atual e coloca numa "Blacklist" (lista negra) na memória do cache.
+        // Assim, esse token exato nunca mais poderá ser usado por ninguém.
+        auth('api')->logout(); 
+
+        return response()->json(['message' => 'Todos os acessos foram revogados']);
+    }
 
     #[OA\Put(
         path: "/api/usuarios/{id}",

@@ -38,20 +38,5 @@ CREATE TABLE IF NOT EXISTS ordem_servicos (
 --     'Admin'
 -- ) ON CONFLICT (cpf) DO NOTHING;
 
-CREATE TABLE personal_access_tokens (
-    id BIGSERIAL PRIMARY KEY,
-    tokenable_type VARCHAR(255) NOT NULL,
-    tokenable_id BIGINT NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    token VARCHAR(64) NOT NULL UNIQUE,
-    abilities TEXT NULL,
-    last_used_at TIMESTAMP WITH TIME ZONE NULL,
-    expires_at TIMESTAMP WITH TIME ZONE NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Indexação para busca rápida de tokens
-CREATE INDEX personal_access_tokens_tokenable_idx ON personal_access_tokens (tokenable_type, tokenable_id);
 
 SWAGGER: http://localhost:8000/api/documentation

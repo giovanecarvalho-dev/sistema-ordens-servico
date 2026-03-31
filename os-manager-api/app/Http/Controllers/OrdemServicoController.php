@@ -231,6 +231,7 @@ class OrdemServicoController extends Controller
         return response()->json(['message' => 'Enviado para a lixeira com sucesso'], 200);
     }
 
+    //RETIRAR E REMOVER PRONTO. ESSA FUNÇÃO NÃO DEVE SER USADA PARA NADA ALÉM DE TESTES MANUAIS, POIS É PERIGOSA.
     #[OA\Put(
         path: "/api/ordens/{id}/restaurar",
         tags: ["OrdensServico"],

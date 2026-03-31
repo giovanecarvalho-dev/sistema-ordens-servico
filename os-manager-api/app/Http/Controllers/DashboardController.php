@@ -22,15 +22,6 @@ class DashboardController extends Controller
     )]
     public function estatisticas(Request $request)
     {
-        $usuarioLogado = $request->user();
-        if (!$usuarioLogado || $usuarioLogado->cargo !== 'Admin') {
-            return response()->json([
-                'error' => 'Acesso negado',
-                'message' => 'Apenas administradores podem visualizar as estatísticas do sistema.',
-                'code' => 403
-            ], 403);
-        }
-
         // Filtra os totais por Ativo e Inativo
         $totalAtivos = OrdemServico::where('ativo', true)->count();
         $excluidos = OrdemServico::where('ativo', false)->count(); 

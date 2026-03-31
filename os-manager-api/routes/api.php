@@ -32,11 +32,10 @@ Route::get('/health', function () {
 Route::post('/usuarios', [UsuarioController::class, 'store']);
 Route::post('/login', [UsuarioController::class, 'login']);
 
-// rotas protegidas pro token
-Route::middleware('auth:sanctum')->group(function () {
+// rotas protegidas por token
+Route::middleware('auth:api')->group(function () {
     
     // todos tem acesso
-
     Route::get('/perfil', [UsuarioController::class, 'me']);
     Route::post('/logout', [UsuarioController::class, 'logout']);
     Route::put('/usuarios/{id}/perfil', [UsuarioController::class, 'updatePerfil']);
@@ -55,11 +54,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/usuarios/{id}', [UsuarioController::class, 'update']);
         Route::delete('/usuarios/{id}', [UsuarioController::class, 'destroy']);
         Route::delete('/ordens/{id}', [OrdemServicoController::class, 'destroy']);
-        
-        // restaurar ordem excluida (Usando PUT conforme você pediu)
-        Route::put('/ordens/{id}/restaurar', [OrdemServicoController::class, 'restaurar']);
-
-        // dashboard
+      
         Route::get('/dashboard/estatisticas', [DashboardController::class, 'estatisticas']);
+        //REMOVE ESSA ROTA DEPOIS DE TESTAR, É PERIGOSA. SÓ DEVE SER USADA PARA TESTES MANUAIS.
+        Route::put('/ordens/{id}/restaurar', [OrdemServicoController::class, 'restaurar']);
     });
 });
