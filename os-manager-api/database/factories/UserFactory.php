@@ -23,7 +23,7 @@ class UserFactory extends Factory
             'cpf'    => fake('pt_BR')->cpf(false), // apenas dígitos
             'email'  => fake('pt_BR')->unique()->safeEmail(),
             'senha'  => Hash::make('senha1234'),
-            'cargo'  => fake()->randomElement(['usuario', 'tecnico']),
+            'cargo'  => fake()->randomElement(['Usuario', 'Tecnico']),
             'ativo'  => true,
         ];
     }
@@ -32,7 +32,7 @@ class UserFactory extends Factory
     public function usuario(): static
     {
         return $this->state(fn (array $attributes) => [
-            'cargo' => 'usuario',
+            'cargo' => 'Usuario',
         ]);
     }
 
@@ -40,7 +40,7 @@ class UserFactory extends Factory
     public function tecnico(): static
     {
         return $this->state(fn (array $attributes) => [
-            'cargo' => 'tecnico',
+            'cargo' => 'Tecnico',
         ]);
     }
 
@@ -48,7 +48,7 @@ class UserFactory extends Factory
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'cargo' => 'admin',
+            'cargo' => 'Admin',
         ]);
     }
 

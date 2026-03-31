@@ -9,13 +9,13 @@ class OrdemServicoSeeder extends Seeder
 {
     public function run(): void
     {
-        // OSs abertas (aguardando atribuição)
+        // OSs novas (aguardando atribuição de técnico)
         OrdemServico::factory()->count(10)->aberta()->create();
 
-        // OSs aleatórias (status variado)
+        // OSs aleatórias (status variado: Novo, Em andamento, Fechado)
         OrdemServico::factory()->count(30)->create();
 
-        // OSs concluídas
+        // OSs fechadas (com solução preenchida)
         OrdemServico::factory()->count(10)->concluida()->create();
     }
 }

@@ -21,7 +21,7 @@ class UsuarioSeeder extends Seeder
                 'nome'  => 'Administrador',
                 'cpf'   => '00000000000',
                 'senha' => Hash::make('admin1234'),
-                'cargo' => 'admin',
+                'cargo' => 'Admin',
                 'ativo' => true,
             ]
         );
@@ -33,7 +33,7 @@ class UsuarioSeeder extends Seeder
                 'nome'  => 'Carlos Técnico',
                 'cpf'   => '11111111111',
                 'senha' => Hash::make('tecnico1234'),
-                'cargo' => 'tecnico',
+                'cargo' => 'Tecnico',
                 'ativo' => true,
             ]
         );
@@ -44,7 +44,7 @@ class UsuarioSeeder extends Seeder
                 'nome'  => 'Fernanda Silva',
                 'cpf'   => '22222222222',
                 'senha' => Hash::make('tecnico1234'),
-                'cargo' => 'tecnico',
+                'cargo' => 'Tecnico',
                 'ativo' => true,
             ]
         );
@@ -56,7 +56,7 @@ class UsuarioSeeder extends Seeder
                 'nome'  => 'João Solicitante',
                 'cpf'   => '33333333333',
                 'senha' => Hash::make('usuario1234'),
-                'cargo' => 'usuario',
+                'cargo' => 'Usuario',
                 'ativo' => true,
             ]
         );

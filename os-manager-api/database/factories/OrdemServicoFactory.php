@@ -49,22 +49,18 @@ class OrdemServicoFactory extends Factory
         ];
 
         $categorias = [
-            'Hardware',
-            'Software',
             'Rede',
-            'Periférico',
-            'Segurança',
-            'Backup',
-            'Suporte Geral',
+            'Infraestrutura',
+            'Acesso',
         ];
 
-        $status    = fake()->randomElement(['aberta', 'em_andamento', 'concluida', 'cancelada']);
-        $tecnicoId = $status !== 'aberta'
-            ? User::where('cargo', 'tecnico')->inRandomOrder()->value('id')
+        $status    = fake()->randomElement(['Novo', 'Em andamento', 'Fechado']);
+        $tecnicoId = $status !== 'Novo'
+            ? User::where('cargo', 'Tecnico')->inRandomOrder()->value('id')
             : null;
 
         $solucao = null;
-        if ($status === 'concluida') {
+        if ($status === 'Fechado') {
             $solucoes = [
                 'Problema resolvido com reinicialização do serviço.',
                 'Driver reinstalado com sucesso.',
@@ -80,32 +76,33 @@ class OrdemServicoFactory extends Factory
             'titulo'      => fake()->randomElement($titulos),
             'descricao'   => fake('pt_BR')->paragraph(2),
             'status'      => $status,
-            'urgencia'    => fake()->randomElement(['baixa', 'media', 'alta', 'critica']),
-            'prioridade'  => fake()->randomElement(['baixa', 'media', 'alta']),
+            'urgencia'    => fake()->randomElement(['Baixa', 'Média', 'Alta', 'Muito Alta']),
+            'prioridade'  => fake()->randomElement(['Baixa', 'Média', 'Alta', 'Muito Alta']),
             'categoria'   => fake()->randomElement($categorias),
             'localizacao' => fake()->randomElement($localizacoes),
             'solucao'     => $solucao,
-            'usuario_id'  => User::where('cargo', 'usuario')->inRandomOrder()->value('id'),
+            'usuario_id'  => User::where('cargo', 'Usuario')->inRandomOrder()->value('id'),
             'tecnico_id'  => $tecnicoId,
         ];
     }
 
-    /** OS com status aberta */
+    /** OS com status Novo (aguardando atribuição) */
     public function aberta(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status'     => 'aberta',
+            'status'     => 'Novo',
             'tecnico_id' => null,
             'solucao'    => null,
         ]);
     }
 
-    /** OS concluída com solução preenchida */
+    /** OS concluída (Fechado) com solução preenchida */
     public function concluida(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status'  => 'concluida',
-            'solucao' => 'Problema identificado e resolvido com sucesso pelo técnico responsável.',
+            'status'     => 'Fechado',
+            'tecnico_id' => User::where('cargo', 'Tecnico')->inRandomOrder()->value('id'),
+            'solucao'    => 'Problema identificado e resolvido com sucesso pelo técnico responsável.',
         ]);
     }
 }
