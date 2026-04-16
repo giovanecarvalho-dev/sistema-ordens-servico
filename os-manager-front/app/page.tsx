@@ -87,12 +87,12 @@ export default function ListaChamados() {
     // O Laravel envia essa propriedade pronta com 'ok', 'alerta' ou 'vencido'
     return os.status_sla || null; 
   };
-
-  const deletarChamado = async (id: number) => {
+const deletarChamado = async (id: number) => {
     if (confirm("Deseja excluir este chamado permanentemente?")) {
       try {
         await api.delete(`/ordens/${id}`);
-        buscarChamados();
+       
+   buscarChamados();
       } catch (err) { alert("Erro ao excluir."); }
     }
   };

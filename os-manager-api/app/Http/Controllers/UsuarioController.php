@@ -3,16 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Cargo; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use OpenApi\Attributes as OA;
 
-
-
 #[OA\Tag(name: "Usuarios", description: "Endpoints para gerenciamento de usuários")]
 class UsuarioController extends Controller
 {
-  #[OA\Get(
+    #[OA\Get(
         path: "/api/usuarios",
         tags: ["Usuarios"],
         summary: "Lista usuários com filtros, paginação e contagem de ordens",
@@ -21,9 +20,9 @@ class UsuarioController extends Controller
             new OA\Parameter(
                 name: "id",
                 in: "query",
-                description: "Filtrar por ID",
+                description: "Filtrar por ID específico",
                 required: false,
-                schema: new OA\Schema(type: "string")
+                schema: new OA\Schema(type: "integer")
             ),
             new OA\Parameter(
                 name: "ativo",
@@ -31,6 +30,41 @@ class UsuarioController extends Controller
                 description: "Filtrar por status ativo/inativo",
                 required: false,
                 schema: new OA\Schema(type: "boolean")
+            ),
+            new OA\Parameter(
+                name: "nome",
+                in: "query",
+                description: "Buscar por parte do nome",
+                required: false,
+                schema: new OA\Schema(type: "string")
+            ),
+            new OA\Parameter(
+                name: "email",
+                in: "query",
+                description: "Buscar por e-mail",
+                required: false,
+                schema: new OA\Schema(type: "string")
+            ),
+            new OA\Parameter(
+                name: "cpf",
+                in: "query",
+                description: "Buscar por início do CPF",
+                required: false,
+                schema: new OA\Schema(type: "string")
+            ),
+            new OA\Parameter(
+                name: "cargo",
+                in: "query",
+                description: "Filtrar pelo nome do cargo (ex: Admin, Tecnico, Usuario)",
+                required: false,
+                schema: new OA\Schema(type: "string")
+            ),
+            new OA\Parameter(
+                name: "busca",
+                in: "query",
+                description: "Busca global (nome, email ou cpf)",
+                required: false,
+                schema: new OA\Schema(type: "string")
             ),
             new OA\Parameter(
                 name: "page",
@@ -49,33 +83,66 @@ class UsuarioController extends Controller
         ],
         responses: [
             new OA\Response(response: 200, description: "Lista paginada de usuários"),
+            new OA\Response(response: 401, description: "Não autenticado"),
             new OA\Response(response: 403, description: "Acesso negado")
         ]
     )]
     public function index(Request $request)
-    {
-        $query = User::query();
+{
+    $query = User::with('cargo');
 
-        // conta as ordens ativas direto no banco
-        $query->withCount(['ordens as ordens_ativas' => function ($q) {
-            $q->where('status', '!=', 'Fechado');
-        }]);
+    // Contagem de ordens ativas baseada no relacionamento core.status
+    $query->withCount(['ordensSolicitadas as ordens_ativas' => function ($q) {
+        $q->whereHas('status', function($sq) {
+            $sq->where('nome', '!=', 'Fechado');
+        });
+    }]);
 
-        // Filtro por ID
-        if ($request->has('id') && $request->query('id') != '') {
-            $query->where('id', $request->query('id'));
-        }
-
-        // Filtro por Status (Ativo/Inativo)
-        if ($request->has('ativo') && $request->query('ativo') != '') {
-            $query->where('ativo', $request->boolean('ativo'));
-        }
-
-        // Paginação com limite máximo de 100 itens por página
-        $perPage = min((int) $request->query('per_page', 15), 100);
-
-        return response()->json($query->orderBy('nome')->paginate($perPage));
+    // Filtros de Identidade
+    if ($request->filled('id')) {
+        $query->where('id', $request->id);
     }
+
+    if ($request->has('ativo')) {
+        $query->where('ativo', $request->boolean('ativo'));
+    }
+
+    // Filtros Textuais Específicos
+    if ($request->filled('nome')) {
+        $query->where('nome', 'ilike', '%' . $request->nome . '%');
+    }
+
+    if ($request->filled('email')) {
+        $query->where('email', 'ilike', '%' . $request->email . '%');
+    }
+
+    if ($request->filled('cpf')) {
+        $query->where('cpf', 'like', $request->cpf . '%');
+    }
+
+    // Filtro por Nome do Cargo
+    if ($request->filled('cargo')) {
+        $query->whereHas('cargo', fn($q) => 
+            $q->where('nome', $request->cargo)
+        );
+    }
+
+    // Busca Global (Nome, E-mail ou CPF)
+    if ($request->filled('busca')) {
+        $query->where(function ($q) use ($request) {
+            $busca = '%' . $request->busca . '%';
+            $q->where('nome', 'ilike', $busca)
+              ->orWhere('email', 'ilike', $busca)
+              ->orWhere('cpf', 'like', $request->busca . '%');
+        });
+    }
+
+    $perPage = min((int) $request->query('per_page', 15), 100);
+
+    return response()->json(
+        $query->orderBy('nome', 'asc')->paginate($perPage)
+    );
+}
 
     #[OA\Post(
         path: "/api/usuarios",
@@ -100,20 +167,23 @@ class UsuarioController extends Controller
     {
         $request->validate([
             'nome'  => 'required|string|max:80',
-            'cpf'   => 'required|string|size:11|unique:usuarios,cpf',
-            'email' => 'required|email|unique:usuarios,email',
+            'cpf'   => 'required|string|size:11|unique:gestoes.usuarios,cpf', 
+            'email' => 'required|email|unique:gestoes.usuarios,email', 
             'senha' => 'required|string|min:4',
         ]);
 
+        // INTEGRAÇÃO COM CARGOS: Pega o ID do 'Usuario' no banco
+        $cargoId = Cargo::where('nome', 'Usuario')->value('id');
+
         $usuario = User::create([
-            'nome'  => $request->nome,
-            'cpf'   => $request->cpf,
-            'email' => $request->email,
-            'senha' => Hash::make($request->senha),
-            'cargo' => 'Usuario',
+            'nome'     => $request->nome,
+            'cpf'      => $request->cpf,
+            'email'    => $request->email,
+            'senha'    => Hash::make($request->senha),
+            'cargo_id' => $cargoId, 
         ]);
 
-        return response()->json($usuario, 201);
+        return response()->json($usuario->load('cargo'), 201);
     }
 
     #[OA\Post(
@@ -135,21 +205,17 @@ class UsuarioController extends Controller
     )]
     public function login(Request $request)
     {
-        // 1. Montamos as credenciais. 
-        // MÁGICA AQUI: Passamos 'cpf' normalmente, mas o Laravel exige que a chave 
-        // da senha no array se chame 'password' para ele saber que precisa aplicar o Hash.
         $credenciais = [
             'cpf' => $request->cpf,
             'password' => $request->senha
         ];
 
-        // 2. O attempt() busca o CPF no banco, checa a senha e já gera o Token JWT!
         if (!$token = auth('api')->attempt($credenciais)) {
             return response()->json(['message' => 'Credenciais inválidas'], 401);
         }
 
-        // 3. Pegamos os dados do usuário que acabou de logar
-        $usuario = auth('api')->user();
+        // O Front-end já recebe o cargo do usuário junto com os dados do perfil, para facilitar a lógica de exibição
+        $usuario = auth('api')->user()->load('cargo');
 
         return response()->json([
             'user'  => $usuario,
@@ -169,8 +235,6 @@ class UsuarioController extends Controller
     )]
     public function logout(Request $request)
     {
-        // O JWT pega o token atual e coloca numa "Blacklist" (lista negra) na memória do cache.
-        // Assim, esse token exato nunca mais poderá ser usado por ninguém.
         auth('api')->logout(); 
 
         return response()->json(['message' => 'Todos os acessos foram revogados']);
@@ -207,10 +271,13 @@ class UsuarioController extends Controller
             'cargo' => 'required|string|in:Usuario,Tecnico,Admin',
         ]);
 
-        $usuario->cargo = $request->cargo;
+        // Atualiza pelo ID do cargo
+        $cargoId = Cargo::where('nome', $request->cargo)->value('id');
+        
+        $usuario->cargo_id = $cargoId;
         $usuario->save();
 
-        return response()->json($usuario);
+        return response()->json($usuario->load('cargo'));
     }
 
     #[OA\Get(
@@ -225,8 +292,8 @@ class UsuarioController extends Controller
     )]
     public function me(Request $request)
     {
-        // Retorna exatamente quem é o dono do Token atual
-        return response()->json($request->user());
+        // Envia o usuário logado e já traz o nome do cargo empacotado
+        return response()->json($request->user()->load('cargo'));
     }
 
     #[OA\Put(
@@ -258,16 +325,15 @@ class UsuarioController extends Controller
     )]
     public function updatePerfil(Request $request, $id)
     {
+        if ($request->user()->id != $id) {
+            return response()->json(['message' => 'Você não tem permissão para editar este perfil.'], 403);
+        }
         
-   
-    if ($request->user()->id != $id) {
-        return response()->json(['message' => 'Você não tem permissão para editar este perfil.'], 403);
-    }
         $usuario = User::findOrFail($id);
 
         $request->validate([
             'nome'       => 'required|string|max:80',
-            'email'      => 'required|email|unique:usuarios,email,' . $id,
+            'email'      => 'required|email|unique:gestoes.usuarios,email,' . $id,
             'nova_senha' => 'sometimes|nullable|string|min:4',
             'senha_atual'=> 'sometimes|nullable|string',
         ]);
@@ -284,7 +350,7 @@ class UsuarioController extends Controller
 
         $usuario->save();
 
-        return response()->json($usuario);
+        return response()->json($usuario->load('cargo'));
     }
 
     #[OA\Delete(
@@ -303,7 +369,7 @@ class UsuarioController extends Controller
     public function destroy($id)
     {
         $usuario = User::findOrFail($id);
-        $usuario->delete();
+        $usuario->delete(); //implementar soft delete
         return response()->json(['message' => 'Usuário removido com sucesso']);
     }
 }

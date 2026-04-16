@@ -5,13 +5,12 @@ use App\Http\Controllers\OrdemServicoController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\DashboardController;
 
+//rotas públicas
 
-//Rotas para testar se a api está funcionando
 Route::get('/teste', function () {
     return response()->json(['message' => 'API funcionando!']);
 });
 
-// rotas publicas
 Route::get('/health', function () {
     try {
         \DB::connection()->getPdo();
@@ -32,23 +31,24 @@ Route::get('/health', function () {
 Route::post('/usuarios', [UsuarioController::class, 'store']);
 Route::post('/login', [UsuarioController::class, 'login']);
 
-// rotas protegidas por token
+
+//protegidos
 Route::middleware('auth:api')->group(function () {
     
-    // todos tem acesso
+    //acesso geral para usuários autenticados (Clientes, Técnicos e Admins)
     Route::get('/perfil', [UsuarioController::class, 'me']);
     Route::post('/logout', [UsuarioController::class, 'logout']);
     Route::put('/usuarios/{id}/perfil', [UsuarioController::class, 'updatePerfil']);
     Route::post('/ordens', [OrdemServicoController::class, 'store']); 
 
-    // so tecnico e admin
+    //tecnicos e admin
     Route::middleware('cargo:Tecnico,Admin')->group(function () {
         Route::get('/ordens', [OrdemServicoController::class, 'index']); 
         Route::get('/ordens/{id}', [OrdemServicoController::class, 'show']);
         Route::put('/ordens/{id}', [OrdemServicoController::class, 'update']);
     });
 
-    // somente admin
+    //apenas administradores
     Route::middleware('cargo:Admin')->group(function () {
         Route::get('/usuarios', [UsuarioController::class, 'index']);
         Route::put('/usuarios/{id}', [UsuarioController::class, 'update']);
@@ -56,7 +56,6 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('/ordens/{id}', [OrdemServicoController::class, 'destroy']);
       
         Route::get('/dashboard/estatisticas', [DashboardController::class, 'estatisticas']);
-        //REMOVE ESSA ROTA DEPOIS DE TESTAR, É PERIGOSA. SÓ DEVE SER USADA PARA TESTES MANUAIS.
-        Route::put('/ordens/{id}/restaurar', [OrdemServicoController::class, 'restaurar']);
+        
     });
 });

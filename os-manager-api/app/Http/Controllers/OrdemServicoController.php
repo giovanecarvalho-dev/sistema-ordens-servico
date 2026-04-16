@@ -3,258 +3,326 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrdemServico;
-use Illuminate\Http\Request;
+use App\Models\Status;
+use App\Http\Requests\OrdemServicoRequest;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(name: "OrdensServico", description: "Endpoints para gerenciamento de ordens de serviço")]
 class OrdemServicoController extends Controller
 {
-    #[OA\Get(
+   #[OA\Get(
         path: "/api/ordens",
-        tags: ["OrdensServico"],
-        summary: "Lista e filtra as ordens de serviço (Autenticado)",
-        description: "Retorna a lista completa de OS com filtros avançados. O campo 'ativo' filtra entre chamados ativos e desativados.",
+        tags: ["Ordens de Servico"],
+        summary: "Lista todas as ordens de serviço com filtros",
         security: [["bearerAuth" => []]],
         parameters: [
-            new OA\Parameter(name: "id", in: "query", description: "Buscar por ID específico", required: false, schema: new OA\Schema(type: "integer")),
-            new OA\Parameter(name: "ativo", in: "query", description: "Filtrar por ativos/inativos", required: false, schema: new OA\Schema(type: "boolean", default: true)),
-            new OA\Parameter(name: "busca", in: "query", description: "Busca por título ou descrição", required: false, schema: new OA\Schema(type: "string")),
             new OA\Parameter(
-                name: "status", 
-                in: "query", 
-                description: "Selecionar Status", 
-                required: false, 
-                schema: new OA\Schema(type: "string", enum: ["Novo", "Em andamento", "Pausado", "Aguardando Peça", "Fechado"])
+                name: "status",
+                in: "query",
+                description: "Filtrar por nome do status",
+                required: false,
+                schema: new OA\Schema(type: "string")
             ),
             new OA\Parameter(
-                name: "categoria", 
-                in: "query", 
-                description: "Selecionar Categoria", 
-                required: false, 
-                schema: new OA\Schema(type: "string", enum: ["Rede", "Infraestrutura", "Acesso"])
+                name: "categoria",
+                in: "query",
+                description: "Filtrar por nome da categoria",
+                required: false,
+                schema: new OA\Schema(type: "string")
             ),
             new OA\Parameter(
-                name: "urgencia", 
-                in: "query", 
-                description: "Selecionar Urgência", 
-                required: false, 
-                schema: new OA\Schema(type: "string", enum: ["Baixa", "Média", "Alta", "Muito Alta"])
+                name: "busca",
+                in: "query",
+                description: "Busca por título ou descrição",
+                required: false,
+                schema: new OA\Schema(type: "string")
             ),
-            new OA\Parameter(name: "tecnico_id", in: "query", description: "Filtrar por técnico responsável", required: false, schema: new OA\Schema(type: "integer"))
+            new OA\Parameter(
+                name: "ID",
+                in: "query",
+                description: "Filtrar por ID numérico ou código de rastreio (UUID)",
+                required: false,
+                schema: new OA\Schema(type: "string") 
+            )
         ],
         responses: [
-            new OA\Response(response: 200, description: "Lista paginada de OS")
+            new OA\Response(
+                response: 200, 
+                description: "Lista de ordens recuperada com sucesso"
+            ),
+            new OA\Response(
+                response: 401, 
+                description: "Não autenticado"
+            ),
+            new OA\Response(
+                response: 404, 
+                description: "Ordens de serviço não encontradas"
+            )
         ]
     )]
-    public function index(Request $request)
+   public function index(\Illuminate\Http\Request $request)
     {
-        $query = OrdemServico::with(['usuario', 'tecnico']);
+        $query = OrdemServico::with([
+            'usuario', 'tecnico',
+            'status', 'categoria',
+            'urgencia', 'prioridade'
+        ]);
 
-        // Mantendo o filtro de 'ativo' que já existia
-        if ($request->has('ativo')) {
-            $query->where('ativo', filter_var($request->ativo, FILTER_VALIDATE_BOOLEAN));
+        $statusAtivo = $request->has('ativo')
+            ? filter_var($request->ativo, FILTER_VALIDATE_BOOLEAN)
+            : true;
+
+        $query->where('ativo', $statusAtivo);
+
+        // Captura tanto o 'id' minúsculo quanto o 'ID' maiúsculo do Swagger
+        $buscaId = $request->input('id') ?? $request->input('ID');
+
+       // Se o front mandar o ID, verifica o formato antes de buscar
+        if (!empty($buscaId)) {
+            $query->where(function ($q) use ($buscaId) {
+                // Se o que foi digitado tiver formato de UUID (ex: 123e4567-e89b-12d3-a456-426614174000)
+                if (\Illuminate\Support\Str::isUuid($buscaId)) {
+                    $q->where('codigo_rastreio', $buscaId);
+                } 
+                // Se não for UUID, assume que é uma busca por ID numérico (e previne quebra se digitarem letras)
+                else {
+                    $q->where('id', is_numeric($buscaId) ? $buscaId : 0);
+                }
+            }); //tava dando erro porque ele tava verificando o ID como se fosse UUID na query, aí dava erro de formato. Agora ele só tenta buscar por UUID se o formato for realmente de UUID, senão ele busca por ID numérico normalmente.
         }
 
-        if ($request->filled('id')) $query->where('id', $request->id);
-        if ($request->filled('status')) $query->where('status', $request->status);
-        if ($request->filled('categoria')) $query->where('categoria', $request->categoria);
-        if ($request->filled('urgencia')) $query->where('urgencia', $request->urgencia);
-        if ($request->filled('tecnico_id')) $query->where('tecnico_id', $request->tecnico_id);
-        
+        // Filtros por relacionamentos
+        if ($request->filled('status')) {
+            $query->whereHas('status', fn($q) =>
+                $q->where('nome', $request->status)
+            );
+        }
+
+        if ($request->filled('categoria')) {
+            $query->whereHas('categoria', fn($q) =>
+                $q->where('nome', $request->categoria)
+            );
+        }
+
+        if ($request->filled('urgencia')) {
+            $query->whereHas('urgencia', fn($q) =>
+                $q->where('nome', $request->urgencia)
+            );
+        }
+
+        if ($request->filled('prioridade')) {
+            $query->whereHas('prioridade', fn($q) =>
+                $q->where('nome', $request->prioridade)
+            );
+        }
+
+        if ($request->filled('tecnico_id')) {
+            $query->where('tecnico_id', $request->tecnico_id);
+        }
+
+        // GIN INDEX: Busca otimizada usando Trigramas no Postgres
         if ($request->filled('busca')) {
-            $query->where('titulo', 'ilike', '%' . $request->busca . '%');
+            $query->where(function ($q) use ($request) {
+                $q->where('titulo', 'ilike', '%' . $request->busca . '%')
+                  ->orWhere('descricao', 'ilike', '%' . $request->busca . '%');
+            });
         }
 
-        return response()->json($query->orderBy('id', 'desc')->get(), 200);
+        return response()->json(
+            // Ordenar pela chave de partição (criado_em)
+            $query->orderBy('criado_em', 'desc')->get(),
+            200
+        );
     }
 
     #[OA\Post(
         path: "/api/ordens",
-        tags: ["OrdensServico"],
+        tags: ["Ordens de Servico"],
         summary: "Cria uma nova ordem de serviço",
         security: [["bearerAuth" => []]],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ["titulo", "descricao", "localizacao"], 
                 properties: [
-                    new OA\Property(property: "titulo", type: "string", example: "Troca de toner"),
-                    new OA\Property(property: "descricao", type: "string", example: "Impressora do RH sem tinta"),
-                    new OA\Property(property: "categoria", type: "string", example: "Rede", enum: ["Rede", "Infraestrutura", "Acesso"]),
-                    new OA\Property(property: "localizacao", type: "string", example: "Bloco A - Sala 10"),
-                    new OA\Property(property: "usuario_id", type: "integer", description: "Opcional. Apenas Admins/Técnicos podem abrir em nome de outros.", example: 2),
+                    new OA\Property(property: "titulo", type: "string", example: "Estagiário esqueceu a senha"),
+                    new OA\Property(property: "descricao", type: "string", example: "O estagiário João da Silva esqueceu a senha do sistema e precisa de ajuda para resetar o acesso."),
+                    new OA\Property(property: "localizacao", type: "string", example: "Bloco A, Sala 102"),
+                    new OA\Property(property: "categoria", type: "string", example: "Acesso"),
+                    new OA\Property(property: "urgencia", type: "string", example: "Alta"),
+                    new OA\Property(property: "prioridade", type: "string", example: "Muito Alta")
                 ]
             )
         ),
         responses: [
-            new OA\Response(response: 201, description: "Ordem criada com sucesso"),
-            new OA\Response(response: 422, description: "Erro de validação")
+            new OA\Response(response: 201, description: "Ordem de serviço criada com sucesso"),
+            new OA\Response(response: 422, description: "Erro de validação nos dados enviados"),
+            new OA\Response(response: 401, description: "Não autenticado")
         ]
     )]
-    public function store(Request $request)
+    public function store(OrdemServicoRequest $request)
     {
         $usuarioLogado = $request->user();
 
-        // Validação: Aceita o usuario_id opcionalmente, verificando se ele existe na tabela
-        $request->validate([
-            'titulo'      => 'required|string|max:100',
-            'descricao'   => 'required|string|max:200',
-            'categoria'   => 'nullable|string|in:Rede,Infraestrutura,Acesso',
-            'localizacao' => 'required|string|max:120',
-            'usuario_id'  => 'sometimes|nullable|exists:usuarios,id',
-        ]);
+        $idDonoDoChamado = $usuarioLogado->id;
 
-        // REGRA DE SEGURANÇA E CONTROLE:
-        $idDonoDoChamado = $usuarioLogado->id; // Por padrão, o dono é quem está logado
+        $cargoId = $usuarioLogado->cargo_id;
+        
+        $cargosPrivilegiados = [1, 2]; 
 
-        // Se quem está logado for Admin ou Técnico E enviou um ID no formulário, alteramos o dono
-        if (in_array($usuarioLogado->cargo, ['Admin', 'Tecnico']) && $request->filled('usuario_id')) {
+        if (in_array($cargoId, $cargosPrivilegiados) && $request->filled('usuario_id')) {
             $idDonoDoChamado = $request->usuario_id;
         }
 
+        $statusNovoId = Status::where('nome', 'Novo')->value('id');
+
         $novaOrdem = OrdemServico::create([
-            'titulo'      => $request->titulo,
-            'descricao'   => $request->descricao,
-            'usuario_id'  => $idDonoDoChamado, 
-            'categoria'   => $request->categoria,
-            'localizacao' => $request->localizacao,
-            'status'      => 'Novo',
-            'ativo'       => true,
+            'titulo'        => $request->titulo,
+            'descricao'     => $request->descricao,
+            'usuario_id'    => $idDonoDoChamado,
+            'categoria_id'  => $request->categoria_id,
+            'localizacao'   => $request->localizacao,
+            'status_id'     => $request->status_id ?? $statusNovoId,
+            'urgencia_id'   => $request->urgencia_id,
+            'prioridade_id' => $request->prioridade_id,
+            'ativo'         => true,
         ]);
 
-        return response()->json($novaOrdem->load(['usuario', 'tecnico']), 201);
+        return response()->json(
+            $novaOrdem->load(['usuario', 'tecnico', 'status', 'categoria', 'urgencia', 'prioridade']), //.
+            201
+        );
     }
 
-    #[OA\Get(
+   #[OA\Get(
         path: "/api/ordens/{id}",
-        tags: ["OrdensServico"],
-        summary: "Mostra detalhes de uma ordem",
+        tags: ["Ordens de Servico"],
+        summary: "Exibe detalhes de uma ordem de serviço específica",
+        description: "Busca uma Ordem de Serviço pelo ID numérico ou pelo Código de Rastreio (UUID)",
         security: [["bearerAuth" => []]],
-        parameters: [new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))],
+        parameters: [
+            new OA\Parameter(
+                name: "id",
+                in: "path",
+                required: true,
+                description: "ID numérico ou Código de Rastreio (UUID)",
+                schema: new OA\Schema(type: "string")
+            )
+        ],
         responses: [
-            new OA\Response(response: 200, description: "Ordem encontrada"),
-            new OA\Response(response: 404, description: "Ordem não encontrada")
+            new OA\Response(response: 200, description: "Dados da ordem de serviço"),
+            new OA\Response(response: 401, description: "Não autenticado"),
+            new OA\Response(response: 404, description: "Ordem de serviço não encontrada")
         ]
     )]
     public function show($id)
     {
-        return OrdemServico::with(['usuario', 'tecnico'])->findOrFail($id);
-    }
-
- #[OA\Put(
-        path: "/api/ordens/{id}",
-        tags: ["OrdensServico"],
-        summary: "Atualiza uma ordem (Com Cálculo Inteligente de SLA e Pausa)",
-        description: "Atualiza a OS. Se o status mudar para 'Pausado', o sistema registra o início da pausa. Se sair da pausa, o sistema calcula os minutos em que ficou pausado, soma ao histórico da OS (para descontar do SLA) e limpa o motivo.",
-        security: [["bearerAuth" => []]],
-        parameters: [
-            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))
-        ],
-        requestBody: new OA\RequestBody(
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: "status", type: "string", example: "Pausado", enum: ["Novo", "Em andamento", "Pausado", "Aguardando Peça", "Fechado"]),
-                    new OA\Property(property: "motivo_pausa", type: "string", maxLength: 150, example: "Aguardando peça do fornecedor", nullable: true),
-                    new OA\Property(property: "urgencia", type: "string", example: "Alta", enum: ["Baixa", "Média", "Alta", "Muito Alta"]),
-                    new OA\Property(property: "prioridade", type: "string", example: "Alta", enum: ["Baixa", "Média", "Alta", "Muito Alta"]),
-                    new OA\Property(property: "tecnico_id", type: "integer", example: 2),
-                    new OA\Property(property: "solucao", type: "string", example: "Peça trocada com sucesso", nullable: true),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: "Ordem atualizada com sucesso"),
-            new OA\Response(response: 404, description: "Ordem não encontrada"),
-            new OA\Response(response: 422, description: "Erro de validação")
-        ]
-    )]
-    public function update(Request $request, $id)
-    {
-        $item = OrdemServico::findOrFail($id);
-
-        $request->validate([
-            'status'       => 'sometimes|string|in:Novo,Em andamento,Pausado,Aguardando Peça,Fechado',
-            'motivo_pausa' => 'sometimes|nullable|string|max:150',
-            'urgencia'     => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',
-            'prioridade'   => 'sometimes|string|in:Baixa,Média,Alta,Muito Alta',
-            'solucao'      => 'sometimes|nullable|string|max:500',
-            'tecnico_id'   => 'sometimes|nullable|exists:usuarios,id',
+        $query = OrdemServico::with([
+            'usuario', 'tecnico',
+            'status', 'categoria',
+            'urgencia', 'prioridade'
         ]);
 
-        $statusAntigo = $item->status;
-        $statusNovo = $request->status ?? $item->status;
-        $dados = $request->all();
+        // Verifica se o que veio na URL é um UUID válido
+        if (\Illuminate\Support\Str::isUuid($id)) { 
+            $ordem = $query->where('codigo_rastreio', $id)->first();
+        } 
+        // Se não for UUID, tenta buscar pelo ID numérico
+        else {
+            $ordem = $query->where('id', is_numeric($id) ? $id : 0)->first();
+        }
 
-        $estadosPausa = ['Pausado', 'Aguardando Peça'];
+        if (!$ordem) {
+            return response()->json([
+                'message' => 'Ordem de serviço não encontrada'
+            ], 404);
+        }
 
-        
+        return response()->json($ordem, 200);
+    }
+    #[OA\Put(
+        path: "/api/ordens/{id}",
+        tags: ["Ordens de Servico"],
+        summary: "Atualiza uma ordem de serviço",
+        security: [["bearerAuth" => []]],
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "string"))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Ordem de serviço atualizada"),
+            new OA\Response(response: 403, description: "Acesso negado"),
+            new OA\Response(response: 404, description: "Ordem de serviço não encontrada")
+        ]
+    )]
+    public function update(OrdemServicoRequest $request, $id)
+    {
+        $item = OrdemServico::where('codigo_rastreio', $id)
+            ->orWhere('id', is_numeric($id) ? $id : 0)
+            ->firstOrFail();
+
+        $dados = $request->only([
+            'status_id',
+            'urgencia_id',
+            'prioridade_id',
+            'tecnico_id',
+            'motivo_pausa',
+            'solucao'
+        ]);
+
+        // Lógica de pausa
+        $statusAntigo = $item->status?->nome;
+
+        $statusNovo = $request->status
+            ?? $item->status?->nome;
+
+        $estadosPausa = ['Pausado', 'Aguardando Peça']; //hardcoded
+
         if (in_array($statusNovo, $estadosPausa)) {
-           
             if (!in_array($statusAntigo, $estadosPausa)) {
                 $dados['pausado_em'] = now();
             }
         } else {
-     
             if (in_array($statusAntigo, $estadosPausa) && $item->pausado_em) {
-                // Calcula os minutos passados desde o início dessa pausa até agora
-                $minutosDestaPausa = now()->diffInMinutes($item->pausado_em);
-                
+                $minutos = now()->diffInMinutes($item->pausado_em);
 
-                $dados['tempo_pausado_minutos'] = ($item->tempo_pausado_minutos ?? 0) + $minutosDestaPausa;
-                
-                // Limpa os campos de controle, pois a pausa acabou
+                $dados['tempo_pausado_minutos'] =
+                    ($item->tempo_pausado_minutos ?? 0) + $minutos;
+
                 $dados['pausado_em'] = null;
                 $dados['motivo_pausa'] = null;
-            }
+            } // .... 
         }
 
         $item->update($dados);
 
-        return response()->json($item->load(['usuario', 'tecnico']), 200);
+        return response()->json(
+            $item->load(['usuario', 'tecnico', 'status', 'categoria', 'urgencia', 'prioridade']), //alterar pelo ID do Banco de dados
+            200
+        );
     }
 
     #[OA\Delete(
         path: "/api/ordens/{id}",
-        tags: ["OrdensServico"],
-        summary: "Remove uma ordem (Manda para lixeira)",
+        tags: ["Ordens de Servico"],
+        summary: "Remove (desativa) uma ordem de serviço",
         security: [["bearerAuth" => []]],
-        parameters: [new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))],
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "string"))
+        ],
         responses: [
-            new OA\Response(response: 200, description: "Ordem removida"),
-            new OA\Response(response: 404, description: "Ordem não encontrada")
+            new OA\Response(response: 200, description: "Ordem de serviço removida"),
+            new OA\Response(response: 403, description: "Acesso negado")
         ]
     )]
     public function destroy($id)
     {
-        $item = OrdemServico::findOrFail($id);
+        $item = OrdemServico::where('codigo_rastreio', $id)
+            ->orWhere('id', is_numeric($id) ? $id : 0)
+            ->firstOrFail();
+            
         $item->update(['ativo' => false]);
-        return response()->json(['message' => 'Enviado para a lixeira com sucesso'], 200);
-    }
 
-    //RETIRAR E REMOVER PRONTO. ESSA FUNÇÃO NÃO DEVE SER USADA PARA NADA ALÉM DE TESTES MANUAIS, POIS É PERIGOSA.
-    #[OA\Put(
-        path: "/api/ordens/{id}/restaurar",
-        tags: ["OrdensServico"],
-        summary: "Restaura uma ordem inativa (Apenas Admin)",
-        description: "Muda o campo ativo de false para true.",
-        security: [["bearerAuth" => []]],
-        parameters: [new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "integer"))],
-        responses: [
-            new OA\Response(response: 200, description: "Ordem restaurada"),
-            new OA\Response(response: 403, description: "Acesso negado"),
-            new OA\Response(response: 404, description: "Ordem não encontrada")
-        ]
-    )]
-    public function restaurar(Request $request, $id)
-    {
-        $usuarioLogado = $request->user();
-        if (!$usuarioLogado || $usuarioLogado->cargo !== 'Admin') {
-            return response()->json(['message' => 'Acesso negado. Apenas administradores.'], 403);
-        }
-
-        $item = OrdemServico::findOrFail($id);
-        $item->update(['ativo' => true]);
-        
-        return response()->json(['message' => 'Ordem de serviço restaurada com sucesso!', 'data' => $item], 200);
+        return response()->json([
+            'message' => 'Enviado para a lixeira com sucesso'
+        ], 200);
     }
 }

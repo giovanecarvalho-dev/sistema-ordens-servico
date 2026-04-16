@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\OrdemServico;
 use Illuminate\Support\Facades\DB;
-use OpenApi\Attributes as OA; 
+use OpenApi\Attributes as OA;
 
 class DashboardController extends Controller
 {
@@ -13,7 +13,7 @@ class DashboardController extends Controller
         path: "/api/dashboard/estatisticas",
         tags: ["Dashboard"],
         summary: "Retorna dados estatísticos do sistema",
-        description: "Acesso restrito: Apenas usuários com cargo de Admin podem visualizar as estatísticas.",
+        description: "Acesso restrito: Apenas usuários com permissão 'dashboard.visualizar' ou cargo Admin.",
         security: [["bearerAuth" => []]],
         responses: [
             new OA\Response(response: 200, description: "Estatísticas geradas com sucesso"),
@@ -22,43 +22,50 @@ class DashboardController extends Controller
     )]
     public function estatisticas(Request $request)
     {
-        // Filtra os totais por Ativo e Inativo
+        // Totais base
         $totalAtivos = OrdemServico::where('ativo', true)->count();
-        $excluidos = OrdemServico::where('ativo', false)->count(); 
-        
-        $resolvidos = OrdemServico::where('ativo', true)->where('status', 'Fechado')->count();
-        $abertos = OrdemServico::where('ativo', true)->whereIn('status', ['Novo', 'Em andamento'])->count();
-        
-        $semTecnico = OrdemServico::where('ativo', true)
-                                  ->whereNull('tecnico_id')
-                                  ->where('status', '!=', 'Fechado')
-                                  ->count();
+        $excluidos = OrdemServico::where('ativo', false)->count();
 
+        // Filtros baseados nos relacionamentos de status
+        $resolvidos = OrdemServico::where('ativo', true)
+            ->whereHas('status', fn($q) => $q->where('nome', 'Fechado'))
+            ->count();
+
+        $abertos = OrdemServico::where('ativo', true)
+            ->whereHas('status', fn($q) => $q->whereIn('nome', ['Novo', 'Em Andamento', 'Pausado']))
+            ->count();
+
+        $semTecnico = OrdemServico::where('ativo', true)
+            ->whereNull('tecnico_id')
+            ->whereHas('status', fn($q) => $q->where('nome', '!=', 'Fechado'))
+            ->count();
+
+        //5 técnicos com mais OS resolvidas (Fechado)
         $topTecnicos = OrdemServico::select('tecnico_id', DB::raw('count(*) as resolvidos'))
-            ->with('tecnico:id,nome') 
+            ->with('tecnico:id,nome')
             ->where('ativo', true)
-            ->where('status', 'Fechado')
+            ->whereHas('status', fn($q) => $q->where('nome', 'Fechado'))
             ->whereNotNull('tecnico_id')
             ->groupBy('tecnico_id')
             ->orderBy('resolvidos', 'desc')
             ->limit(5)
             ->get()
-            ->map(function ($item) {
-                return [
-                    'id' => $item->tecnico_id,
-                    'nome' => $item->tecnico ? $item->tecnico->nome : 'Desconhecido',
-                    'resolvidos' => $item->resolvidos
-                ];
-            });
+            ->map(fn($item) => [
+                'id' => $item->tecnico_id,
+                'nome' => $item->tecnico->nome ?? 'Desconhecido',
+                'resolvidos' => $item->resolvidos
+            ]);
 
-        $categorias = OrdemServico::select(
-                'categoria', 
+        $categorias = DB::table('core.ordem_servicos as os')
+            ->join('core.categoria as c', 'os.categoria_id', '=', 'c.id') 
+            ->join('core.status as s', 'os.status_id', '=', 's.id')
+            ->select(
+                'c.nome as categoria',
                 DB::raw('count(*) as total'),
-                DB::raw('SUM(CASE WHEN status != \'Fechado\' THEN 1 ELSE 0 END) as abertos')
+                DB::raw("SUM(CASE WHEN s.nome != 'Fechado' THEN 1 ELSE 0 END) as abertos")
             )
-            ->where('ativo', true)
-            ->whereNotNull('categoria')
-            ->groupBy('categoria')
+            ->where('os.ativo', true)
+            ->groupBy('c.nome')
             ->get();
 
         return response()->json([

@@ -41,6 +41,7 @@ return array(
     'Psr\\Container\\' => array($vendorDir . '/psr/container/src'),
     'Psr\\Clock\\' => array($vendorDir . '/psr/clock/src'),
     'PHPOpenSourceSaver\\JWTAuth\\' => array($vendorDir . '/php-open-source-saver/jwt-auth/src'),
+    'OwenIt\\Auditing\\' => array($vendorDir . '/owen-it/laravel-auditing/src'),
     'Namshi\\JOSE\\' => array($vendorDir . '/namshi/jose/src/Namshi/JOSE'),
     'Lcobucci\\JWT\\' => array($vendorDir . '/lcobucci/jwt/src'),
     'Laravel\\SerializableClosure\\' => array($vendorDir . '/laravel/serializable-closure/src'),

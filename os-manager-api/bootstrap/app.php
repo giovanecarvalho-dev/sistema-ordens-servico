@@ -15,7 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'cargo' => \App\Http\Middleware\CheckCargo::class,
+            'cargo' => \App\Http\Middleware\CheckPermissao::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

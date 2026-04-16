@@ -17,7 +17,7 @@
                     "Dashboard"
                 ],
                 "summary": "Retorna dados estatísticos do sistema",
-                "description": "Acesso restrito: Apenas usuários com cargo de Admin podem visualizar as estatísticas.",
+                "description": "Acesso restrito: Apenas usuários com permissão 'dashboard.visualizar' ou cargo Admin.",
                 "operationId": "280207991833169165fa89055b977585",
                 "responses": {
                     "200": {
@@ -37,22 +37,16 @@
         "/api/ordens": {
             "get": {
                 "tags": [
-                    "OrdensServico"
+                    "Ordens de Servico"
                 ],
-                "summary": "Lista e filtra as ordens de serviço (Paginado)",
-                "description": "Admins veem tudo. Técnicos veem os atribuídos a eles. Usuários veem os que abriram.",
+                "summary": "Lista todas as ordens de serviço com filtros",
                 "operationId": "e9954d9a37630cdf929ae616b77d4103",
                 "parameters": [
                     {
-                        "name": "busca",
-                        "in": "query",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
                         "name": "status",
                         "in": "query",
+                        "description": "Filtrar por nome do status",
+                        "required": false,
                         "schema": {
                             "type": "string"
                         }
@@ -60,27 +54,10 @@
                     {
                         "name": "categoria",
                         "in": "query",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "urgencia",
-                        "in": "query",
-                        "description": "Buscar por ID específico",
+                        "description": "Filtrar por nome da categoria",
                         "required": false,
                         "schema": {
                             "type": "string"
-                        }
-                    },
-                    {
-                        "name": "page",
-                        "in": "query",
-                        "description": "Filtrar por ativos/inativos",
-                        "required": false,
-                        "schema": {
-                            "type": "boolean",
-                            "default": true
                         }
                     },
                     {
@@ -93,63 +70,24 @@
                         }
                     },
                     {
-                        "name": "status",
+                        "name": "ID",
                         "in": "query",
-                        "description": "Selecionar Status",
+                        "description": "Filtrar por ID numérico ou código de rastreio (UUID)",
                         "required": false,
                         "schema": {
-                            "type": "string",
-                            "enum": [
-                                "Novo",
-                                "Em andamento",
-                                "Pausado",
-                                "Aguardando Peça",
-                                "Fechado"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "categoria",
-                        "in": "query",
-                        "description": "Selecionar Categoria",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "Rede",
-                                "Infraestrutura",
-                                "Acesso"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "urgencia",
-                        "in": "query",
-                        "description": "Selecionar Urgência",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "Baixa",
-                                "Média",
-                                "Alta",
-                                "Muito Alta"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "tecnico_id",
-                        "in": "query",
-                        "description": "Filtrar por técnico responsável",
-                        "required": false,
-                        "schema": {
-                            "type": "integer"
+                            "type": "string"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Lista paginada de OS"
+                        "description": "Lista de ordens recuperada com sucesso"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Ordens de serviço não encontradas"
                     }
                 },
                 "security": [
@@ -160,7 +98,7 @@
             },
             "post": {
                 "tags": [
-                    "OrdensServico"
+                    "Ordens de Servico"
                 ],
                 "summary": "Cria uma nova ordem de serviço",
                 "operationId": "57a9b14a3f752b7e724fb3443663c8e5",
@@ -169,37 +107,30 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "titulo",
-                                    "descricao",
-                                    "localizacao"
-                                ],
                                 "properties": {
                                     "titulo": {
                                         "type": "string",
-                                        "example": "Troca de toner"
+                                        "example": "Estagiário esqueceu a senha"
                                     },
                                     "descricao": {
                                         "type": "string",
-                                        "example": "Impressora do RH sem tinta"
-                                    },
-                                    "categoria": {
-                                        "type": "string",
-                                        "enum": [
-                                            "Rede",
-                                            "Infraestrutura",
-                                            "Acesso"
-                                        ],
-                                        "example": "Rede"
+                                        "example": "O estagiário João da Silva esqueceu a senha do sistema e precisa de ajuda para resetar o acesso."
                                     },
                                     "localizacao": {
                                         "type": "string",
-                                        "example": "Bloco A - Sala 10"
+                                        "example": "Bloco A, Sala 102"
                                     },
-                                    "usuario_id": {
-                                        "description": "Opcional. Apenas Admins/Técnicos podem abrir em nome de outros.",
-                                        "type": "integer",
-                                        "example": 2
+                                    "categoria": {
+                                        "type": "string",
+                                        "example": "Acesso"
+                                    },
+                                    "urgencia": {
+                                        "type": "string",
+                                        "example": "Alta"
+                                    },
+                                    "prioridade": {
+                                        "type": "string",
+                                        "example": "Muito Alta"
                                     }
                                 },
                                 "type": "object"
@@ -209,10 +140,13 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Ordem criada com sucesso"
+                        "description": "Ordem de serviço criada com sucesso"
                     },
                     "422": {
-                        "description": "Erro de validação"
+                        "description": "Erro de validação nos dados enviados"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
                     }
                 },
                 "security": [
@@ -225,26 +159,31 @@
         "/api/ordens/{id}": {
             "get": {
                 "tags": [
-                    "OrdensServico"
+                    "Ordens de Servico"
                 ],
-                "summary": "Mostra detalhes de uma ordem",
+                "summary": "Exibe detalhes de uma ordem de serviço específica",
+                "description": "Busca uma Ordem de Serviço pelo ID numérico ou pelo Código de Rastreio (UUID)",
                 "operationId": "47855ee63438258517219d38894ca714",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID numérico ou Código de Rastreio (UUID)",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Ordem encontrada"
+                        "description": "Dados da ordem de serviço"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
                     },
                     "404": {
-                        "description": "Ordem não encontrada"
+                        "description": "Ordem de serviço não encontrada"
                     }
                 },
                 "security": [
@@ -255,10 +194,9 @@
             },
             "put": {
                 "tags": [
-                    "OrdensServico"
+                    "Ordens de Servico"
                 ],
-                "summary": "Atualiza uma ordem (Com Cálculo Inteligente de SLA e Pausa)",
-                "description": "Atualiza a OS. Se o status mudar para 'Pausado', o sistema registra o início da pausa. Se sair da pausa, o sistema calcula os minutos em que ficou pausado, soma ao histórico da OS (para descontar do SLA) e limpa o motivo.",
+                "summary": "Atualiza uma ordem de serviço",
                 "operationId": "a5d619b2ba267041732114d8f319a67f",
                 "parameters": [
                     {
@@ -266,76 +204,19 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string"
                         }
                     }
                 ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "status": {
-                                        "type": "string",
-                                        "enum": [
-                                            "Novo",
-                                            "Em andamento",
-                                            "Pausado",
-                                            "Aguardando Peça",
-                                            "Fechado"
-                                        ],
-                                        "example": "Pausado"
-                                    },
-                                    "motivo_pausa": {
-                                        "type": "string",
-                                        "maxLength": 150,
-                                        "example": "Aguardando peça do fornecedor",
-                                        "nullable": true
-                                    },
-                                    "urgencia": {
-                                        "type": "string",
-                                        "enum": [
-                                            "Baixa",
-                                            "Média",
-                                            "Alta",
-                                            "Muito Alta"
-                                        ],
-                                        "example": "Alta"
-                                    },
-                                    "prioridade": {
-                                        "type": "string",
-                                        "enum": [
-                                            "Baixa",
-                                            "Média",
-                                            "Alta",
-                                            "Muito Alta"
-                                        ],
-                                        "example": "Alta"
-                                    },
-                                    "tecnico_id": {
-                                        "type": "integer",
-                                        "example": 2
-                                    },
-                                    "solucao": {
-                                        "type": "string",
-                                        "example": "Peça trocada com sucesso",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
                 "responses": {
                     "200": {
-                        "description": "Ordem atualizada com sucesso"
+                        "description": "Ordem de serviço atualizada"
+                    },
+                    "403": {
+                        "description": "Acesso negado"
                     },
                     "404": {
-                        "description": "Ordem não encontrada"
-                    },
-                    "422": {
-                        "description": "Erro de validação"
+                        "description": "Ordem de serviço não encontrada"
                     }
                 },
                 "security": [
@@ -346,9 +227,9 @@
             },
             "delete": {
                 "tags": [
-                    "OrdensServico"
+                    "Ordens de Servico"
                 ],
-                "summary": "Remove uma ordem (Manda para lixeira)",
+                "summary": "Remove (desativa) uma ordem de serviço",
                 "operationId": "3ddb628fff4f4f9ebafbcbbc20f22bd1",
                 "parameters": [
                     {
@@ -356,52 +237,16 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Ordem removida"
-                    },
-                    "404": {
-                        "description": "Ordem não encontrada"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/ordens/{id}/restaurar": {
-            "put": {
-                "tags": [
-                    "OrdensServico"
-                ],
-                "summary": "Restaura uma ordem inativa (Apenas Admin)",
-                "description": "Muda o campo ativo de false para true.",
-                "operationId": "ffc106dcbc654bc794e51f10ed595e74",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Ordem restaurada"
+                        "description": "Ordem de serviço removida"
                     },
                     "403": {
                         "description": "Acesso negado"
-                    },
-                    "404": {
-                        "description": "Ordem não encontrada"
                     }
                 },
                 "security": [
@@ -422,10 +267,10 @@
                     {
                         "name": "id",
                         "in": "query",
-                        "description": "Filtrar por ID",
+                        "description": "Filtrar por ID específico",
                         "required": false,
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         }
                     },
                     {
@@ -435,6 +280,51 @@
                         "required": false,
                         "schema": {
                             "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "nome",
+                        "in": "query",
+                        "description": "Buscar por parte do nome",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "email",
+                        "in": "query",
+                        "description": "Buscar por e-mail",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "cpf",
+                        "in": "query",
+                        "description": "Buscar por início do CPF",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "cargo",
+                        "in": "query",
+                        "description": "Filtrar pelo nome do cargo (ex: Admin, Tecnico, Usuario)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "busca",
+                        "in": "query",
+                        "description": "Busca global (nome, email ou cpf)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
                         }
                     },
                     {
@@ -461,6 +351,9 @@
                 "responses": {
                     "200": {
                         "description": "Lista paginada de usuários"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
                     },
                     "403": {
                         "description": "Acesso negado"
@@ -766,16 +659,16 @@
     },
     "tags": [
         {
-            "name": "OrdensServico",
-            "description": "Endpoints para gerenciamento de ordens de serviço"
-        },
-        {
             "name": "Usuarios",
             "description": "Endpoints para gerenciamento de usuários"
         },
         {
             "name": "Dashboard",
             "description": "Dashboard"
+        },
+        {
+            "name": "Ordens de Servico",
+            "description": "Ordens de Servico"
         }
     ]
 }
