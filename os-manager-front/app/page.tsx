@@ -7,7 +7,7 @@ export default function ListaChamados() {
   const [ordens, setOrdens] = useState([]);
   const [meta, setMeta] = useState<any>(null);
   const [carregando, setCarregando] = useState(true);
-  
+
   const [filtros, setFiltros] = useState({
     busca: "",
     status: "",
@@ -18,7 +18,7 @@ export default function ListaChamados() {
 
   // --- 2. ESTADOS DE INTERFACE E MODAL ---
   const [tecnicos, setTecnicos] = useState([]);
-  
+
   const [chamadoSelecionado, setChamadoSelecionado] = useState<any>(null);
   const [tecnicoId, setTecnicoId] = useState("");
   const [status, setStatus] = useState("");
@@ -26,7 +26,7 @@ export default function ListaChamados() {
   const [prioridade, setPrioridade] = useState("");
   const [solucao, setSolucao] = useState("");
   const [motivoPausa, setMotivoPausa] = useState("");
-  
+
   const [cargo, setCargo] = useState("");
   const [meuUsuarioId, setMeuUsuarioId] = useState("");
 
@@ -44,20 +44,20 @@ export default function ListaChamados() {
       if (filtros.status) params.status = filtros.status;
       if (filtros.categoria) params.categoria = filtros.categoria;
       if (filtros.urgencia) params.urgencia = filtros.urgencia;
-      
+
       // Se for técnico, a API do Laravel vai filtrar apenas os chamados dele
       if (currentCargo === "Tecnico" && currentUserId) {
         params.tecnico_id = currentUserId;
       }
 
       const [resOrdens, resTecnicos] = await Promise.all([
-        api.get("/ordens", { params }), 
+        api.get("/ordens", { params }),
         api.get("/usuarios"),
       ]);
-      
+
       const listaOrdens = Array.isArray(resOrdens.data) ? resOrdens.data : (resOrdens.data?.data || []);
       const listaTecnicos = Array.isArray(resTecnicos.data) ? resTecnicos.data : (resTecnicos.data?.data || []);
-      
+
       setOrdens(listaOrdens);
       setTecnicos(listaTecnicos);
     } catch (err) {
@@ -81,28 +81,29 @@ export default function ListaChamados() {
 
   // Função "Burra" do Front-end: Apenas reflete o que o Back-end enviou
   const statusSla = (os: any) => {
-    if (os.status === "Fechado") return null;
-    if (["Pausado", "Aguardando Peça"].includes(os.status)) return "pausado"; 
-    
+    const statusNome = os.status?.nome || os.status;
+    if (statusNome === "Fechado") return null;
+    if (["Pausado", "Aguardando Peça"].includes(statusNome)) return "pausado";
+
     // O Laravel envia essa propriedade pronta com 'ok', 'alerta' ou 'vencido'
-    return os.status_sla || null; 
+    return os.status_sla || null;
   };
-const deletarChamado = async (id: number) => {
+  const deletarChamado = async (id: number) => {
     if (confirm("Deseja excluir este chamado permanentemente?")) {
       try {
         await api.delete(`/ordens/${id}`);
-       
-   buscarChamados();
+
+        buscarChamados();
       } catch (err) { alert("Erro ao excluir."); }
     }
   };
 
   const abrirModalEdicao = (os: any) => {
     setChamadoSelecionado(os);
-    setStatus(os.status);
+    setStatus(os.status?.nome || os.status);
     setTecnicoId(os.tecnico_id || "");
-    setUrgencia(os.urgencia || "Média");
-    setPrioridade(os.prioridade || "Média");
+    setUrgencia(os.urgencia?.nome || os.urgencia || "Média");
+    setPrioridade(os.prioridade?.nome || os.prioridade || "Média");
     setSolucao(os.solucao || "");
     setMotivoPausa(os.motivo_pausa || "");
   };
@@ -110,12 +111,12 @@ const deletarChamado = async (id: number) => {
   const salvarEdicao = async (e: any) => {
     e.preventDefault();
     try {
-      const payload: any = { 
-        status, 
+      const payload: any = {
+        status,
         solucao,
         motivo_pausa: ["Pausado", "Aguardando Peça"].includes(status) ? motivoPausa : null
       };
-      
+
       if (cargo === "Admin") {
         payload.urgencia = urgencia;
         payload.prioridade = prioridade;
@@ -166,12 +167,12 @@ const deletarChamado = async (id: number) => {
           placeholder="Filtrar por ID ou título..."
           className={`${filterClass} w-64`}
           value={filtros.busca}
-          onChange={(e) => setFiltros({...filtros, busca: e.target.value, page: 1})}
+          onChange={(e) => setFiltros({ ...filtros, busca: e.target.value, page: 1 })}
         />
       </div>
 
       <div className="flex gap-3 mb-6 flex-wrap">
-        <select value={filtros.status} onChange={(e) => setFiltros({...filtros, status: e.target.value, page: 1})} className={filterClass}>
+        <select value={filtros.status} onChange={(e) => setFiltros({ ...filtros, status: e.target.value, page: 1 })} className={filterClass}>
           <option value="">Todos os status</option>
           <option>Novo</option>
           <option>Em andamento</option>
@@ -179,13 +180,13 @@ const deletarChamado = async (id: number) => {
           <option>Aguardando Peça</option>
           <option>Fechado</option>
         </select>
-        <select value={filtros.categoria} onChange={(e) => setFiltros({...filtros, categoria: e.target.value, page: 1})} className={filterClass}>
+        <select value={filtros.categoria} onChange={(e) => setFiltros({ ...filtros, categoria: e.target.value, page: 1 })} className={filterClass}>
           <option value="">Todas as categorias</option>
           <option>Rede</option>
           <option>Infraestrutura</option>
           <option>Acesso</option>
         </select>
-        <select value={filtros.urgencia} onChange={(e) => setFiltros({...filtros, urgencia: e.target.value, page: 1})} className={filterClass}>
+        <select value={filtros.urgencia} onChange={(e) => setFiltros({ ...filtros, urgencia: e.target.value, page: 1 })} className={filterClass}>
           <option value="">Todas as urgências</option>
           <option>Muito Alta</option>
           <option>Alta</option>
@@ -238,8 +239,8 @@ const deletarChamado = async (id: number) => {
                   <td className="px-6 py-4 font-mono text-blue-600 dark:text-blue-400">#{os.id}</td>
                   <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">{os.titulo}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${categoriaCor[os.categoria] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
-                      {os.categoria || "-"}
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${categoriaCor[os.categoria?.nome || os.categoria] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                      {os.categoria?.nome || os.categoria || "-"}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
@@ -253,11 +254,10 @@ const deletarChamado = async (id: number) => {
                   </td>
                   <td className="px-6 py-4">
                     {slaStatus ? (
-                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase whitespace-nowrap ${
-                          slaStatus === "vencido" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                            : slaStatus === "alerta" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase whitespace-nowrap ${slaStatus === "vencido" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          : slaStatus === "alerta" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                             : slaStatus === "pausado" ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                         }`}
                       >
                         {slaLabel[slaStatus]}
@@ -267,20 +267,19 @@ const deletarChamado = async (id: number) => {
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
-                        os.status === "Fechado" ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                          : ["Pausado", "Aguardando Peça"].includes(os.status) ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-                          : os.status === "Em andamento" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                          : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${(os.status?.nome || os.status) === "Fechado" ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                        : ["Pausado", "Aguardando Peça"].includes(os.status?.nome || os.status) ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                          : (os.status?.nome || os.status) === "Em andamento" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                       }`}
                     >
-                      {os.status}
+                      {os.status?.nome || os.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 max-w-[150px]">
                     {os.motivo_pausa ? (
-                      <span 
-                        className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 block truncate" 
+                      <span
+                        className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 block truncate"
                         title={os.motivo_pausa}
                       >
                         {os.motivo_pausa}
@@ -290,13 +289,13 @@ const deletarChamado = async (id: number) => {
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.urgencia] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
-                      {os.urgencia || "-"}
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.urgencia?.nome || os.urgencia] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                      {os.urgencia?.nome || os.urgencia || "-"}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.prioridade] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
-                      {os.prioridade || "-"}
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.prioridade?.nome || os.prioridade] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                      {os.prioridade?.nome || os.prioridade || "-"}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
@@ -331,9 +330,9 @@ const deletarChamado = async (id: number) => {
       {/* PAGINAÇÃO */}
       {meta && meta.last_page > 1 && (
         <div className="flex justify-center items-center gap-4 mt-8">
-          <button 
-            disabled={filtros.page === 1} 
-            onClick={() => setFiltros({...filtros, page: filtros.page - 1})}
+          <button
+            disabled={filtros.page === 1}
+            onClick={() => setFiltros({ ...filtros, page: filtros.page - 1 })}
             className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold disabled:opacity-30 hover:bg-slate-50"
           >
             Anterior
@@ -341,9 +340,9 @@ const deletarChamado = async (id: number) => {
           <span className="text-xs font-black text-slate-500 uppercase tracking-widest">
             Página {filtros.page} de {meta.last_page}
           </span>
-          <button 
-            disabled={filtros.page === meta.last_page} 
-            onClick={() => setFiltros({...filtros, page: filtros.page + 1})}
+          <button
+            disabled={filtros.page === meta.last_page}
+            onClick={() => setFiltros({ ...filtros, page: filtros.page + 1 })}
             className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold disabled:opacity-30 hover:bg-slate-50"
           >
             Próximo
@@ -368,7 +367,7 @@ const deletarChamado = async (id: number) => {
                     <label className="text-xs font-bold text-slate-400 uppercase">Técnico</label>
                     <select value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)} className={selectClass}>
                       <option value="">Não atribuído</option>
-                      {tecnicos.filter((t: any) => t.cargo === "Tecnico" || t.cargo === "Admin").map((t: any) => (
+                      {tecnicos.filter((t: any) => (t.cargo?.nome || t.cargo) === "Tecnico" || (t.cargo?.nome || t.cargo) === "Admin").map((t: any) => (
                         <option key={t.id} value={t.id}>{t.nome}</option>
                       ))}
                     </select>

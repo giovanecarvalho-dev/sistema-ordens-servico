@@ -26,7 +26,7 @@ if (resposta.status === 200) {
 
     localStorage.setItem('tecnicoLogado', cpf);
     localStorage.setItem('usuarioId', user.id);
-    localStorage.setItem('usuarioCargo', user.cargo);
+    localStorage.setItem('usuarioCargo', user.cargo?.nome || user.cargo);
     localStorage.setItem('usuarioNome', user.nome);
     localStorage.setItem('token', token);
 
@@ -34,7 +34,7 @@ if (resposta.status === 200) {
     localStorage.setItem('theme', temaSalvo);
     document.documentElement.classList.toggle('dark', temaSalvo === 'dark');
 
-    if (user.cargo === 'Usuario') {
+    if ((user.cargo?.nome || user.cargo) === 'Usuario') {
         router.push('/novo');
     } else {
         router.push('/');

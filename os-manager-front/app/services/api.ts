@@ -25,6 +25,12 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       // O código 401 significa que o JWT expirou ou é inválido
       
+      // Se o erro 401 for na rota de login, não mostramos "sessão expirada", 
+      // pois é apenas uma tentativa de login inválida.
+      if (error.config.url?.includes('/login')) {
+        return Promise.reject(error);
+      }
+      
       //Limpa tudo que é velho no navegador
       localStorage.removeItem('token');
       localStorage.removeItem('usuarioId');

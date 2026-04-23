@@ -32,9 +32,10 @@ export default function UsuariosPage() {
 
     const alterarCargo = async (userId: number, novoCargo: string) => {
         try {
-            await api.put(`/usuarios/${userId}`, { cargo: novoCargo });
+            const res = await api.put(`/usuarios/${userId}`, { cargo: novoCargo });
+            const usuarioAtualizado = res.data;
             setUsuarios((prev: any) =>
-                prev.map((u: any) => u.id === userId ? { ...u, cargo: novoCargo } : u)
+                prev.map((u: any) => u.id === userId ? usuarioAtualizado : u)
             );
         } catch (err) {
             alert("Erro ao atualizar cargo.");
@@ -126,11 +127,11 @@ export default function UsuariosPage() {
                                     </td>
                                     <td className="px-5 py-4 text-sm text-center">
                                         <div className="flex items-center justify-center gap-2">
-                                            <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${cargoCor[user.cargo] || cargoCor['Usuario']}`}>
-                                                {user.cargo || 'Usuario'}
+                                            <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${cargoCor[user.cargo?.nome || user.cargo] || cargoCor['Usuario']}`}>
+                                                {user.cargo?.nome || user.cargo || 'Usuario'}
                                             </span>
                                             <select
-                                                value={user.cargo || 'Usuario'}
+                                                value={user.cargo?.nome || user.cargo || 'Usuario'}
                                                 onChange={(e) => alterarCargo(user.id, e.target.value)}
                                                 className="text-xs p-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
                                             >
