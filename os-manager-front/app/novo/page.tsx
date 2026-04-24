@@ -13,19 +13,26 @@ export default function NovoChamado() {
   const [descricao, setDescricao] = useState('');
   const [categoria, setCategoria] = useState('Rede');
   const [localizacao, setLocalizacao] = useState('');
+  const [anexo, setAnexo] = useState<File | null>(null);
   const [sucesso, setSucesso] = useState(false);
   const router = useRouter();
 
   const salvarOrdem = async (e: any) => {
     e.preventDefault();
     try {
-      // O Front-end agora envia APENAS os dados do formulário.
-      // A identidade (Token) vai automaticamente nos bastidores pelo axios/api.
-      await api.post('/ordens', {
-        titulo, 
-        descricao, 
-        categoria, 
-        localizacao
+      const formData = new FormData();
+      formData.append('titulo', titulo);
+      formData.append('descricao', descricao);
+      formData.append('categoria', categoria);
+      formData.append('localizacao', localizacao);
+      if (anexo) {
+        formData.append('anexo', anexo);
+      }
+
+      await api.post('/ordens', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       
       setSucesso(true);
@@ -35,6 +42,7 @@ export default function NovoChamado() {
         setDescricao('');
         setCategoria('Rede');
         setLocalizacao('');
+        setAnexo(null);
       }, 3000);
     } catch (err: any) {
       console.error(err.response?.data);
@@ -117,6 +125,19 @@ export default function NovoChamado() {
               onChange={(e) => setDescricao(e.target.value)}
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Anexo (Opcional)</label>
+            </div>
+            <input
+              type="file"
+              className={inputClass}
+              onChange={(e) => setAnexo(e.target.files?.[0] || null)}
+              accept=".pdf,.jpg,.jpeg,.png"
+            />
+            <p className="text-[10px] text-slate-400">Formatos aceitos: PDF, JPG, PNG (Max: 5MB)</p>
           </div>
 
           <div className="flex justify-end gap-4 pt-4">
