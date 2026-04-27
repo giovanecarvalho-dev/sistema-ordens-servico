@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\OrdemServico;
 use App\Models\Status;
 use App\Http\Requests\OrdemServicoRequest;
+use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(name: "OrdensServico", description: "Endpoints para gerenciamento de ordens de serviço")]
@@ -176,6 +177,11 @@ class OrdemServicoController extends Controller
 
         $statusNovoId = Status::where('nome', 'Novo')->value('id');
 
+        $caminhoAnexo = null;
+        if ($request->hasFile('anexo')) {
+            $caminhoAnexo = $request->file('anexo')->store('anexos', 'public');
+        }
+
         $novaOrdem = OrdemServico::create([
             'titulo'        => $request->titulo,
             'descricao'     => $request->descricao,
@@ -185,6 +191,7 @@ class OrdemServicoController extends Controller
             'status_id'     => $request->status_id ?? $statusNovoId,
             'urgencia_id'   => $request->urgencia_id,
             'prioridade_id' => $request->prioridade_id,
+            'anexo'         => $caminhoAnexo,
             'ativo'         => true,
         ]);
 
@@ -239,6 +246,36 @@ class OrdemServicoController extends Controller
         }
 
         return response()->json($ordem, 200);
+    }
+
+    #[OA\Get(
+        path: "/api/ordens/{id}/anexo",
+        tags: ["Ordens de Servico"],
+        summary: "Faz o download do anexo da ordem de serviço",
+        security: [["bearerAuth" => []]],
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, schema: new OA\Schema(type: "string"))
+        ],
+        responses: [
+            new OA\Response(response: 200, description: "Arquivo em anexo"),
+            new OA\Response(response: 404, description: "Ordem de serviço ou anexo não encontrado")
+        ]
+    )]
+    public function downloadAnexo($id)
+    {
+        $item = OrdemServico::where('codigo_rastreio', $id)
+            ->orWhere('id', is_numeric($id) ? $id : 0)
+            ->firstOrFail();
+
+        if (!$item->anexo) {
+            return response()->json(['message' => 'Nenhum anexo encontrado'], 404);
+        }
+
+        if (!Storage::disk('public')->exists($item->anexo)) {
+            return response()->json(['message' => 'Arquivo não encontrado no servidor'], 404);
+        }
+
+        return Storage::disk('public')->download($item->anexo);
     }
     #[OA\Put(
         path: "/api/ordens/{id}",

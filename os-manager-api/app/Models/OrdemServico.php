@@ -31,6 +31,7 @@ class OrdemServico extends Model
         'pausado_em',
         'tempo_pausado_minutos',
         'codigo_rastreio', 
+        'anexo',
     ];
 
     // Carrega os objetos relacionados automaticamente (Evita N+1 queries)

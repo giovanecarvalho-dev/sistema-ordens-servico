@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS ordem_servicos (
     categoria VARCHAR(20),
     localizacao VARCHAR(120) NOT NULL,
     solucao VARCHAR(200),
+    anexo VARCHAR(255),
     usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
     tecnico_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

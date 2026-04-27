@@ -148,6 +148,33 @@ export default function ListaChamados() {
     }
   };
 
+  const baixarAnexo = async (id: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      const response = await api.get(`/ordens/${id}/anexo`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      // Get filename from headers if possible, or use a default
+      const contentDisposition = response.headers['content-disposition'];
+      let fileName = 'anexo';
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (fileNameMatch && fileNameMatch.length === 2) {
+          fileName = fileNameMatch[1];
+        }
+      }
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+    } catch (err) {
+      alert("Erro ao baixar anexo. Pode não estar disponível.");
+    }
+  };
+
   const urgenciaCor: any = {
     "Muito Alta": "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
     Alta: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
@@ -381,6 +408,16 @@ export default function ListaChamados() {
             <p className="text-xs text-slate-400 mb-6 uppercase tracking-widest font-bold">
               {chamadoSelecionado.titulo}
             </p>
+            {chamadoSelecionado.anexo && (
+              <div className="mb-6">
+                <button
+                  onClick={(e) => baixarAnexo(chamadoSelecionado.id, e)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                  📄 Baixar Anexo
+                </button>
+              </div>
+            )}
             <form onSubmit={salvarEdicao} className="space-y-4">
               {cargo === "Admin" && (
                 <>
