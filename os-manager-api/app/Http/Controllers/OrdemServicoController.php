@@ -128,9 +128,10 @@ class OrdemServicoController extends Controller
             });
         }
 
+        // Ordenar pela chave de partição (criado_em) e paginar
+        $perPage = $request->input('per_page', 15);
         return response()->json(
-            // Ordenar pela chave de partição (criado_em)
-            $query->orderBy('criado_em', 'desc')->get(),
+            $query->orderBy('criado_em', 'desc')->paginate($perPage),
             200
         );
     }
