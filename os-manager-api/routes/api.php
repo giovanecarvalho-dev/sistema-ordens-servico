@@ -45,6 +45,7 @@ Route::middleware('auth:api')->group(function () {
     Route::middleware('cargo:Tecnico,Admin')->group(function () {
         Route::get('/ordens', [OrdemServicoController::class, 'index']); 
         Route::get('/ordens/{id}', [OrdemServicoController::class, 'show']);
+        Route::get('/ordens/{id}/anexo', [OrdemServicoController::class, 'downloadAnexo']);
         Route::put('/ordens/{id}', [OrdemServicoController::class, 'update']);
     });
 
