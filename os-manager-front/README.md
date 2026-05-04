@@ -74,3 +74,8 @@ O frontend é executado em um container Docker, garantindo consistência entre a
 
 ```bash
 docker-compose up -d --build
+cp .env.example .env
+composer install
+php artisan key:generate
+php artisan jwt:secret
+php artisan migrate --seed

@@ -40,12 +40,12 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [UsuarioController::class, 'logout']);
     Route::put('/usuarios/{id}/perfil', [UsuarioController::class, 'updatePerfil']);
     Route::post('/ordens', [OrdemServicoController::class, 'store']); 
+    Route::get('/ordens/{id}/anexo', [OrdemServicoController::class, 'downloadAnexo']);
 
     //tecnicos e admin
     Route::middleware('cargo:Tecnico,Admin')->group(function () {
         Route::get('/ordens', [OrdemServicoController::class, 'index']); 
         Route::get('/ordens/{id}', [OrdemServicoController::class, 'show']);
-        Route::get('/ordens/{id}/anexo', [OrdemServicoController::class, 'downloadAnexo']);
         Route::put('/ordens/{id}', [OrdemServicoController::class, 'update']);
     });
 

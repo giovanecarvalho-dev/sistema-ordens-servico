@@ -60,17 +60,7 @@ class OrdemServico extends Model
         });
     }
 
-    /**
-     * ==========================================
-     * ROUTE MODEL BINDING 
-     * ==========================================
-     * Faz com que o Laravel use o 'codigo_rastreio' nas URLs automaticamente,
-     * aproveitando o índice 'idx_os_rastreio_publico'.
-     */
-    public function getRouteKeyName()
-    {
-        return 'codigo_rastreio';
-    }
+
 
     // ==========================================
     // RELAÇÕES

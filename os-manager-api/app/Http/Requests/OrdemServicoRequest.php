@@ -24,7 +24,7 @@ class OrdemServicoRequest extends FormRequest
             'localizacao'   => 'required|string|max:120',
             'motivo_pausa'  => 'sometimes|nullable|string|max:150',
             'solucao'       => 'sometimes|nullable|string|max:500',
-            'anexo'         => 'sometimes|nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'anexo'         => 'sometimes|nullable|file|mimes:pdf,jpg,jpeg,png|max:5120', //5mb, é pq o laravel usa kb
             
             // Validação das strings usando a classe Rule (Evita o bug do schema "core")
             'categoria'     => ['required', 'string', Rule::exists(Categoria::class, 'nome')],

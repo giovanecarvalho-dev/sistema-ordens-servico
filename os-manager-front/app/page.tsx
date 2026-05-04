@@ -30,7 +30,7 @@ export default function ListaChamados() {
   const [cargo, setCargo] = useState("");
   const [meuUsuarioId, setMeuUsuarioId] = useState("");
 
-  // --- 3. BUSCA DE DADOS (  SERVER-SIDE) ---
+  // --- 3. BUSCA DE DADOS (SERVER-SIDE) ---
   const buscarChamados = useCallback(async () => {
     setCarregando(true);
     try {
@@ -145,33 +145,6 @@ export default function ListaChamados() {
       buscarChamados();
     } catch (err) {
       alert("Erro ao atualizar a ordem de serviço.");
-    }
-  };
-
-  const baixarAnexo = async (id: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    try {
-      const response = await api.get(`/ordens/${id}/anexo`, {
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      // Get filename from headers if possible, or use a default
-      const contentDisposition = response.headers['content-disposition'];
-      let fileName = 'anexo';
-      if (contentDisposition) {
-        const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (fileNameMatch && fileNameMatch.length === 2) {
-          fileName = fileNameMatch[1];
-        }
-      }
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode?.removeChild(link);
-    } catch (err) {
-      alert("Erro ao baixar anexo. Pode não estar disponível.");
     }
   };
 
@@ -300,9 +273,9 @@ export default function ListaChamados() {
                   <td className="px-2 py-3 text-center overflow-hidden">
                     {slaStatus ? (
                       <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase truncate ${slaStatus === "vencido" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                          : slaStatus === "alerta" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                            : slaStatus === "pausado" ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-                              : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : slaStatus === "alerta" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                          : slaStatus === "pausado" ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                         }`}
                       >
                         {slaLabel[slaStatus]}
@@ -313,9 +286,9 @@ export default function ListaChamados() {
                   </td>
                   <td className="px-2 py-3 text-center overflow-hidden">
                     <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase truncate ${(os.status?.nome || os.status) === "Fechado" ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                        : ["Pausado", "Aguardando Peça"].includes(os.status?.nome || os.status) ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-                          : (os.status?.nome || os.status) === "Em andamento" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      : ["Pausado", "Aguardando Peça"].includes(os.status?.nome || os.status) ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                        : (os.status?.nome || os.status) === "Em andamento" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                          : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                       }`}
                     >
                       {os.status?.nome || os.status}
@@ -408,16 +381,6 @@ export default function ListaChamados() {
             <p className="text-xs text-slate-400 mb-6 uppercase tracking-widest font-bold">
               {chamadoSelecionado.titulo}
             </p>
-            {chamadoSelecionado.anexo && (
-              <div className="mb-6">
-                <button
-                  onClick={(e) => baixarAnexo(chamadoSelecionado.id, e)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                >
-                  📄 Baixar Anexo
-                </button>
-              </div>
-            )}
             <form onSubmit={salvarEdicao} className="space-y-4">
               {cargo === "Admin" && (
                 <>

@@ -20,6 +20,8 @@ export default function NovoChamado() {
   const salvarOrdem = async (e: any) => {
     e.preventDefault();
     try {
+      // O Front-end agora envia APENAS os dados do formulário.
+      // A identidade (Token) vai automaticamente nos bastidores pelo axios/api.
       const formData = new FormData();
       formData.append('titulo', titulo);
       formData.append('descricao', descricao);

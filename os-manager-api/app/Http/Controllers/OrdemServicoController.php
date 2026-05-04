@@ -263,9 +263,11 @@ class OrdemServicoController extends Controller
     )]
     public function downloadAnexo($id)
     {
-        $item = OrdemServico::where('codigo_rastreio', $id)
-            ->orWhere('id', is_numeric($id) ? $id : 0)
-            ->firstOrFail();
+        if (\Illuminate\Support\Str::isUuid($id)) {
+            $item = OrdemServico::where('codigo_rastreio', $id)->firstOrFail();
+        } else {
+            $item = OrdemServico::where('id', is_numeric($id) ? $id : 0)->firstOrFail();
+        }
 
         if (!$item->anexo) {
             return response()->json(['message' => 'Nenhum anexo encontrado'], 404);
@@ -293,9 +295,11 @@ class OrdemServicoController extends Controller
     )]
     public function update(OrdemServicoRequest $request, $id)
     {
-        $item = OrdemServico::where('codigo_rastreio', $id)
-            ->orWhere('id', is_numeric($id) ? $id : 0)
-            ->firstOrFail();
+        if (\Illuminate\Support\Str::isUuid($id)) {
+            $item = OrdemServico::where('codigo_rastreio', $id)->firstOrFail();
+        } else {
+            $item = OrdemServico::where('id', is_numeric($id) ? $id : 0)->firstOrFail();
+        }
 
         $dados = $request->only([
             'status_id',
@@ -353,9 +357,11 @@ class OrdemServicoController extends Controller
     )]
     public function destroy($id)
     {
-        $item = OrdemServico::where('codigo_rastreio', $id)
-            ->orWhere('id', is_numeric($id) ? $id : 0)
-            ->firstOrFail();
+        if (\Illuminate\Support\Str::isUuid($id)) {
+            $item = OrdemServico::where('codigo_rastreio', $id)->firstOrFail();
+        } else {
+            $item = OrdemServico::where('id', is_numeric($id) ? $id : 0)->firstOrFail();
+        }
             
         $item->update(['ativo' => false]);
 
