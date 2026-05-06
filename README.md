@@ -47,15 +47,34 @@ Plataforma integrada para gestão de chamados técnicos, com API REST em Laravel
 
 ## Demonstração
 
-| Tela | Preview |
-|---|---|
-| Login | ![Login](docs/screenshots/Login.png) |
-| Listagem de chamados | ![Listagem](docs/screenshots/ListaChamados.png) |
-| Criação de OS | ![Criar OS](docs/screenshots/AbrirChamado.png) |
-| Dashboard | ![Dashboard](docs/screenshots/Dashboard.png) |
-| Criar Usuário | ![Criar Usuário](docs/screenshots/CriarUsuario.png) |
-| Swagger Ordens | ![Swagger Ordens](docs/screenshots/SwaggerDashboardOrdens.png) |
-| Swagger Usuários | ![Swagger Usuários](docs/screenshots/SwaggerUsuarios.png) |
+### Autenticação
+**Login**
+![Login](docs/screenshots/Login.png)
+
+**Criar Usuário**
+![Criar Usuário](docs/screenshots/CriarUsuario.png)
+
+---
+
+### Sistema
+**Dashboard**
+![Dashboard](docs/screenshots/Dashboard.png)
+
+**Listagem de Chamados**
+![Listagem](docs/screenshots/ListaChamados.png)
+
+**Abertura de Chamado**
+![Abrir Chamado](docs/screenshots/AbrirChamado.png)
+
+---
+
+### API (Swagger)
+**Swagger - Ordens**
+![Swagger Ordens](docs/screenshots/SwaggerDashboardOrdens.png)
+
+**Swagger - Usuários**
+![Swagger Usuários](docs/screenshots/SwaggerUsuarios.png)
+
 ## Stack
 
 **Backend**
