@@ -10,7 +10,7 @@ class Categoria extends Model
     protected $table = 'core.categoria'; 
 
     // 2. Se a sua tabela não tiver as colunas created_at e updated_at, descomente a linha abaixo:
-    // public $timestamps = false;
+    public $timestamps = false;
 
     protected $fillable = ['nome'];
 

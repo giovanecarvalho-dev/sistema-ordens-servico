@@ -38,8 +38,11 @@ export default function ListaChamados() {
       const currentCargo = localStorage.getItem("usuarioCargo") || "";
       const currentUserId = localStorage.getItem("usuarioId") || "";
 
-      // Monta os parâmetros que serão enviados na URL da API (O Back-end que lute agora!)
-      const params: any = {};
+      // Monta os parâmetros que serão enviados na URL da API
+      const params: any = {
+        page: filtros.page,
+        per_page: 15,
+      };
       if (filtros.busca) params.busca = filtros.busca;
       if (filtros.status) params.status = filtros.status;
       if (filtros.categoria) params.categoria = filtros.categoria;
@@ -55,13 +58,27 @@ export default function ListaChamados() {
         api.get("/usuarios"),
       ]);
 
-      const listaOrdens = Array.isArray(resOrdens.data) ? resOrdens.data : (resOrdens.data?.data || []);
+      // Laravel paginate() retorna { data: [...], current_page, last_page, per_page, total, ... }
+      const resData = resOrdens.data;
+      const listaOrdens = Array.isArray(resData) ? resData : (resData?.data || []);
       const listaTecnicos = Array.isArray(resTecnicos.data) ? resTecnicos.data : (resTecnicos.data?.data || []);
 
       setOrdens(listaOrdens);
       setTecnicos(listaTecnicos);
+
+      // Extrai os metadados de paginação do Laravel
+      if (!Array.isArray(resData) && resData?.last_page) {
+        setMeta({
+          current_page: resData.current_page,
+          last_page: resData.last_page,
+          per_page: resData.per_page,
+          total: resData.total,
+        });
+      }
     } catch (err) {
       console.error("Erro ao carregar dados", err);
+    } finally {
+      setCarregando(false);
     }
   }, [filtros]);
 
@@ -125,35 +142,9 @@ export default function ListaChamados() {
 
       await api.put(`/ordens/${chamadoSelecionado.id}`, payload);
       setChamadoSelecionado(null);
+      buscarChamados();
     } catch (err) {
       alert("Erro ao atualizar a ordem de serviço.");
-    }
-  };
-
-  const baixarAnexo = async (id: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    try {
-      const response = await api.get(`/ordens/${id}/anexo`, {
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      // Get filename from headers if possible, or use a default
-      const contentDisposition = response.headers['content-disposition'];
-      let fileName = 'anexo';
-      if (contentDisposition) {
-        const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (fileNameMatch && fileNameMatch.length === 2) {
-          fileName = fileNameMatch[1];
-        }
-      }
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode?.removeChild(link);
-    } catch (err) {
-      alert("Erro ao baixar anexo. Pode não estar disponível.");
     }
   };
 
@@ -183,7 +174,7 @@ export default function ListaChamados() {
   const ordensExibicao = Array.isArray(ordens) ? ordens : [];
 
   return (
-    <div className="p-10">
+    <div className="p-4 md:p-6 max-w-full overflow-hidden">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Gestão de Chamados</h2>
@@ -228,24 +219,24 @@ export default function ListaChamados() {
       </div>
 
       {/* TABELA COM TODAS AS COLUNAS RESTAURADAS */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-x-auto">
-        <table className="w-full text-left text-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-x-auto max-w-full">
+        <table className="w-full text-left text-[11px] table-fixed">
           <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-widest">
             <tr>
-              <th className="px-6 py-4">ID</th>
-              <th className="px-6 py-4">Título</th>
-              <th className="px-6 py-4">Categoria</th>
-              <th className="px-6 py-4">Localização</th>
-              <th className="px-6 py-4">Aberto por</th>
-              <th className="px-6 py-4">Abertura</th>
-              <th className="px-6 py-4">SLA</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Motivo Pausa</th>
-              <th className="px-6 py-4">Urgência</th>
-              <th className="px-6 py-4">Prioridade</th>
-              <th className="px-6 py-4">Técnico</th>
-              <th className="px-6 py-4">Solução</th>
-              <th className="px-6 py-4 text-right">Ações</th>
+              <th className="px-2 py-3 w-[4%]">ID</th>
+              <th className="px-2 py-3 w-[10%]">Título</th>
+              <th className="px-2 py-3 w-[7%]">Categoria</th>
+              <th className="px-2 py-3 w-[8%]">Localização</th>
+              <th className="px-2 py-3 w-[7%]">Aberto por</th>
+              <th className="px-2 py-3 w-[7%] text-center">Abertura</th>
+              <th className="px-2 py-3 w-[8%] text-center">SLA</th>
+              <th className="px-2 py-3 w-[8%] text-center">Status</th>
+              <th className="px-2 py-3 w-[8%]">Motivo</th>
+              <th className="px-2 py-3 w-[7%] text-center">Urgência</th>
+              <th className="px-2 py-3 w-[7%] text-center">Prioridade</th>
+              <th className="px-2 py-3 w-[7%]">Técnico</th>
+              <th className="px-2 py-3 w-[7%]">Solução</th>
+              <th className="px-2 py-3 w-[5%] text-right">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -263,86 +254,86 @@ export default function ListaChamados() {
                   key={os.id}
                   className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${slaStatus === "vencido" ? "border-l-4 border-red-500" : slaStatus === "alerta" ? "border-l-4 border-yellow-400" : ""}`}
                 >
-                  <td className="px-6 py-4 font-mono text-blue-600 dark:text-blue-400">#{os.id}</td>
-                  <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">{os.titulo}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${categoriaCor[os.categoria?.nome || os.categoria] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                  <td className="px-2 py-3 font-mono text-blue-600 dark:text-blue-400 truncate overflow-hidden">#{os.id}</td>
+                  <td className="px-2 py-3 font-bold text-slate-800 dark:text-slate-200 truncate overflow-hidden" title={os.titulo}>{os.titulo}</td>
+                  <td className="px-2 py-3 overflow-hidden">
+                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase ${categoriaCor[os.categoria?.nome || os.categoria] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
                       {os.categoria?.nome || os.categoria || "-"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                  <td className="px-2 py-3 text-slate-500 dark:text-slate-400 text-[10px] truncate overflow-hidden">
                     {os.localizacao || <span className="italic text-slate-300 dark:text-slate-600">Não informada</span>}
                   </td>
-                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                  <td className="px-2 py-3 text-slate-500 dark:text-slate-400 text-[10px] truncate overflow-hidden">
                     {os.usuario?.nome || "-"}
                   </td>
-                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">
-                    {os.criado_em ? new Date(os.criado_em).toLocaleString("pt-BR") : "-"}
+                  <td className="px-2 py-3 text-slate-500 dark:text-slate-400 text-[10px] text-center truncate overflow-hidden">
+                    {os.criado_em ? new Date(os.criado_em).toLocaleDateString("pt-BR") : "-"}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-2 py-3 text-center overflow-hidden">
                     {slaStatus ? (
-                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase whitespace-nowrap ${slaStatus === "vencido" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                          : slaStatus === "alerta" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                            : slaStatus === "pausado" ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-                              : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase truncate ${slaStatus === "vencido" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        : slaStatus === "alerta" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                          : slaStatus === "pausado" ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                         }`}
                       >
                         {slaLabel[slaStatus]}
                       </span>
                     ) : (
-                      <span className="text-xs text-slate-300 dark:text-slate-600 italic">—</span>
+                      <span className="text-[10px] text-slate-300 dark:text-slate-600 italic">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${(os.status?.nome || os.status) === "Fechado" ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                        : ["Pausado", "Aguardando Peça"].includes(os.status?.nome || os.status) ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-                          : (os.status?.nome || os.status) === "Em andamento" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                  <td className="px-2 py-3 text-center overflow-hidden">
+                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase truncate ${(os.status?.nome || os.status) === "Fechado" ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                      : ["Pausado", "Aguardando Peça"].includes(os.status?.nome || os.status) ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                        : (os.status?.nome || os.status) === "Em andamento" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                          : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                       }`}
                     >
                       {os.status?.nome || os.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 max-w-[150px]">
+                  <td className="px-2 py-3 overflow-hidden">
                     {os.motivo_pausa ? (
                       <span
-                        className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 block truncate"
+                        className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 block truncate"
                         title={os.motivo_pausa}
                       >
                         {os.motivo_pausa}
                       </span>
                     ) : (
-                      <span className="text-xs text-slate-300 dark:text-slate-600 italic">—</span>
+                      <span className="text-[10px] text-slate-300 dark:text-slate-600 italic">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.urgencia?.nome || os.urgencia] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                  <td className="px-2 py-3 text-center overflow-hidden">
+                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase ${urgenciaCor[os.urgencia?.nome || os.urgencia] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
                       {os.urgencia?.nome || os.urgencia || "-"}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${urgenciaCor[os.prioridade?.nome || os.prioridade] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                  <td className="px-2 py-3 text-center overflow-hidden">
+                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase ${urgenciaCor[os.prioridade?.nome || os.prioridade] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
                       {os.prioridade?.nome || os.prioridade || "-"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">
+                  <td className="px-2 py-3 text-slate-500 dark:text-slate-400 text-[10px] truncate overflow-hidden">
                     {os.tecnico?.nome || <span className="italic text-slate-300 dark:text-slate-600">Não atribuído</span>}
                   </td>
-                  <td className="px-6 py-4 text-slate-500 dark:text-slate-400 max-w-[160px]">
+                  <td className="px-2 py-3 text-slate-500 dark:text-slate-400 overflow-hidden">
                     {os.solucao ? (
-                      <span className="truncate block text-xs" title={os.solucao}>
-                        {os.solucao.substring(0, 40)}{os.solucao.length > 40 ? "..." : ""}
+                      <span className="truncate block text-[10px]" title={os.solucao}>
+                        {os.solucao}
                       </span>
                     ) : (
-                      <span className="text-xs text-slate-300 dark:text-slate-600 italic">Sem solução</span>
+                      <span className="text-[10px] text-slate-300 dark:text-slate-600 italic">Sem solução</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-right whitespace-nowrap">
-                    <button onClick={() => abrirModalEdicao(os)} className="text-blue-600 font-bold mr-4 hover:underline">
+                  <td className="px-2 py-3 text-right overflow-hidden">
+                    <button onClick={() => abrirModalEdicao(os)} className="text-blue-600 font-bold mr-1 hover:underline text-[10px]">
                       EDITAR
                     </button>
                     {cargo === "Admin" && (
-                      <button onClick={() => deletarChamado(os.id)} className="text-red-500 font-bold hover:underline">
+                      <button onClick={() => deletarChamado(os.id)} className="text-red-500 font-bold hover:underline text-[10px]">
                         EXCLUIR
                       </button>
                     )}
@@ -360,17 +351,20 @@ export default function ListaChamados() {
           <button
             disabled={filtros.page === 1}
             onClick={() => setFiltros({ ...filtros, page: filtros.page - 1 })}
-            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold disabled:opacity-30 hover:bg-slate-50"
+            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold disabled:opacity-30 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             Anterior
           </button>
-          <span className="text-xs font-black text-slate-500 uppercase tracking-widest">
-            Página {filtros.page} de {meta.last_page}
-          </span>
+          <div className="text-center">
+            <span className="text-xs font-black text-slate-500 uppercase tracking-widest block">
+              Página {filtros.page} de {meta.last_page}
+            </span>
+            <span className="text-[10px] text-slate-400">{meta.total} registro{meta.total !== 1 ? 's' : ''} no total</span>
+          </div>
           <button
             disabled={filtros.page === meta.last_page}
             onClick={() => setFiltros({ ...filtros, page: filtros.page + 1 })}
-            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold disabled:opacity-30 hover:bg-slate-50"
+            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold disabled:opacity-30 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             Próximo
           </button>
@@ -387,16 +381,6 @@ export default function ListaChamados() {
             <p className="text-xs text-slate-400 mb-6 uppercase tracking-widest font-bold">
               {chamadoSelecionado.titulo}
             </p>
-            {chamadoSelecionado.anexo && (
-              <div className="mb-6">
-                <button
-                  onClick={(e) => baixarAnexo(chamadoSelecionado.id, e)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                >
-                  📄 Baixar Anexo
-                </button>
-              </div>
-            )}
             <form onSubmit={salvarEdicao} className="space-y-4">
               {cargo === "Admin" && (
                 <>

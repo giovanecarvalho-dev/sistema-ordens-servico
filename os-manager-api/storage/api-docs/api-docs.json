@@ -256,6 +256,38 @@
                 ]
             }
         },
+        "/api/ordens/{id}/anexo": {
+            "get": {
+                "tags": [
+                    "Ordens de Servico"
+                ],
+                "summary": "Faz o download do anexo da ordem de serviço",
+                "operationId": "b04a72e485721be0f3ad38c72e95af61",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Arquivo em anexo"
+                    },
+                    "404": {
+                        "description": "Ordem de serviço ou anexo não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/usuarios": {
             "get": {
                 "tags": [

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\OrdemServico;
 use App\Models\Status;
+use App\Models\Urgencia;
+use App\Models\Prioridade;
 use App\Http\Requests\OrdemServicoRequest;
 use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
@@ -129,9 +131,10 @@ class OrdemServicoController extends Controller
             });
         }
 
+        // Ordenar pela chave de partição (criado_em) e paginar
+        $perPage = $request->input('per_page', 15);
         return response()->json(
-            // Ordenar pela chave de partição (criado_em)
-            $query->orderBy('criado_em', 'desc')->get(),
+            $query->orderBy('criado_em', 'desc')->paginate($perPage),
             200
         );
     }
@@ -162,6 +165,8 @@ class OrdemServicoController extends Controller
     )]
     public function store(OrdemServicoRequest $request)
     {
+        \Log::info('Store called', ['request' => $request->all(), 'user' => $request->user()]);
+
         $usuarioLogado = $request->user();
 
         $idDonoDoChamado = $usuarioLogado->id;
@@ -176,6 +181,9 @@ class OrdemServicoController extends Controller
 
         $statusNovoId = Status::where('nome', 'Novo')->value('id');
 
+        $urgenciaBaixaId = Urgencia::where('nome', 'Baixa')->value('id');
+        $prioridadeBaixaId = Prioridade::where('nome', 'Baixa')->value('id');
+
         $caminhoAnexo = null;
         if ($request->hasFile('anexo')) {
             $caminhoAnexo = $request->file('anexo')->store('anexos', 'public');
@@ -188,8 +196,8 @@ class OrdemServicoController extends Controller
             'categoria_id'  => $request->categoria_id,
             'localizacao'   => $request->localizacao,
             'status_id'     => $request->status_id ?? $statusNovoId,
-            'urgencia_id'   => $request->urgencia_id,
-            'prioridade_id' => $request->prioridade_id,
+            'urgencia_id'   => $request->urgencia_id ?? $urgenciaBaixaId,
+            'prioridade_id' => $request->prioridade_id ?? $prioridadeBaixaId,
             'anexo'         => $caminhoAnexo,
             'ativo'         => true,
         ]);
@@ -262,9 +270,11 @@ class OrdemServicoController extends Controller
     )]
     public function downloadAnexo($id)
     {
-        $item = OrdemServico::where('codigo_rastreio', $id)
-            ->orWhere('id', is_numeric($id) ? $id : 0)
-            ->firstOrFail();
+        if (\Illuminate\Support\Str::isUuid($id)) {
+            $item = OrdemServico::where('codigo_rastreio', $id)->firstOrFail();
+        } else {
+            $item = OrdemServico::where('id', is_numeric($id) ? $id : 0)->firstOrFail();
+        }
 
         if (!$item->anexo) {
             return response()->json(['message' => 'Nenhum anexo encontrado'], 404);
@@ -292,9 +302,11 @@ class OrdemServicoController extends Controller
     )]
     public function update(OrdemServicoRequest $request, $id)
     {
-        $item = OrdemServico::where('codigo_rastreio', $id)
-            ->orWhere('id', is_numeric($id) ? $id : 0)
-            ->firstOrFail();
+        if (\Illuminate\Support\Str::isUuid($id)) {
+            $item = OrdemServico::where('codigo_rastreio', $id)->firstOrFail();
+        } else {
+            $item = OrdemServico::where('id', is_numeric($id) ? $id : 0)->firstOrFail();
+        }
 
         $dados = $request->only([
             'status_id',
@@ -352,9 +364,11 @@ class OrdemServicoController extends Controller
     )]
     public function destroy($id)
     {
-        $item = OrdemServico::where('codigo_rastreio', $id)
-            ->orWhere('id', is_numeric($id) ? $id : 0)
-            ->firstOrFail();
+        if (\Illuminate\Support\Str::isUuid($id)) {
+            $item = OrdemServico::where('codigo_rastreio', $id)->firstOrFail();
+        } else {
+            $item = OrdemServico::where('id', is_numeric($id) ? $id : 0)->firstOrFail();
+        }
             
         $item->update(['ativo' => false]);
 

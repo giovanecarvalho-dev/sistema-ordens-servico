@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Prioridade extends Model
 {
     protected $table = 'core.prioridade'; 
-    // public $timestamps = false;
+    public $timestamps = false;
 
     protected $fillable = ['nome'];
 
