@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\OrdemServico;
 use App\Models\Status;
+use App\Models\Urgencia;
+use App\Models\Prioridade;
 use App\Http\Requests\OrdemServicoRequest;
 use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
@@ -163,6 +165,8 @@ class OrdemServicoController extends Controller
     )]
     public function store(OrdemServicoRequest $request)
     {
+        \Log::info('Store called', ['request' => $request->all(), 'user' => $request->user()]);
+
         $usuarioLogado = $request->user();
 
         $idDonoDoChamado = $usuarioLogado->id;
@@ -177,6 +181,9 @@ class OrdemServicoController extends Controller
 
         $statusNovoId = Status::where('nome', 'Novo')->value('id');
 
+        $urgenciaBaixaId = Urgencia::where('nome', 'Baixa')->value('id');
+        $prioridadeBaixaId = Prioridade::where('nome', 'Baixa')->value('id');
+
         $caminhoAnexo = null;
         if ($request->hasFile('anexo')) {
             $caminhoAnexo = $request->file('anexo')->store('anexos', 'public');
@@ -189,8 +196,8 @@ class OrdemServicoController extends Controller
             'categoria_id'  => $request->categoria_id,
             'localizacao'   => $request->localizacao,
             'status_id'     => $request->status_id ?? $statusNovoId,
-            'urgencia_id'   => $request->urgencia_id,
-            'prioridade_id' => $request->prioridade_id,
+            'urgencia_id'   => $request->urgencia_id ?? $urgenciaBaixaId,
+            'prioridade_id' => $request->prioridade_id ?? $prioridadeBaixaId,
             'anexo'         => $caminhoAnexo,
             'ativo'         => true,
         ]);

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Status extends Model
 {
     protected $table = 'core.status'; 
-    // public $timestamps = false;
+    public $timestamps = false;
 
     protected $fillable = ['nome'];
 

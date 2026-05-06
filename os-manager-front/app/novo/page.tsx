@@ -83,20 +83,20 @@ export default function NovoChamado() {
                 <option value="Acesso">Acesso</option>
               </select>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Localização</label>
-                <Contador atual={localizacao.length} limite={LIMITE_LOCALIZACAO} />
-              </div>
-              <input
-                className={inputClass}
-                placeholder="Ex: GETAG - DETIN"
-                value={localizacao}
-                maxLength={LIMITE_LOCALIZACAO}
-                onChange={(e) => setLocalizacao(e.target.value)}
-              />
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Localização</label>
+              <Contador atual={localizacao.length} limite={LIMITE_LOCALIZACAO} />
             </div>
+            <input
+              className={inputClass}
+              placeholder="Ex: Sala 101, Prédio A"
+              value={localizacao}
+              maxLength={LIMITE_LOCALIZACAO}
+              onChange={(e) => setLocalizacao(e.target.value)}
+            />
           </div>
 
           <div className="space-y-2">

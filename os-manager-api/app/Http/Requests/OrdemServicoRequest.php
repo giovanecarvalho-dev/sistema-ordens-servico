@@ -21,7 +21,7 @@ class OrdemServicoRequest extends FormRequest
         return [
             'titulo'        => 'required|string|max:100',
             'descricao'     => 'required|string|max:200',
-            'localizacao'   => 'required|string|max:120',
+            'localizacao'   => 'nullable|string|max:120',
             'motivo_pausa'  => 'sometimes|nullable|string|max:150',
             'solucao'       => 'sometimes|nullable|string|max:500',
             'anexo'         => 'sometimes|nullable|file|mimes:pdf,jpg,jpeg,png|max:5120', //5mb, é pq o laravel usa kb
@@ -29,8 +29,8 @@ class OrdemServicoRequest extends FormRequest
             // Validação das strings usando a classe Rule (Evita o bug do schema "core")
             'categoria'     => ['required', 'string', Rule::exists(Categoria::class, 'nome')],
             'status'        => ['sometimes', 'string', Rule::exists(Status::class, 'nome')],
-            'urgencia'      => ['required', 'string', Rule::exists(Urgencia::class, 'nome')],
-            'prioridade'    => ['required', 'string', Rule::exists(Prioridade::class, 'nome')],
+            'urgencia'      => ['sometimes', 'nullable', 'string', Rule::exists(Urgencia::class, 'nome')],
+            'prioridade'    => ['sometimes', 'nullable', 'string', Rule::exists(Prioridade::class, 'nome')],
             
             // Chaves Estrangeiras de Usuários (Avisando explicitamente que a conexão é pgsql)
             'usuario_id'    => 'sometimes|nullable|exists:pgsql.gestoes.usuarios,id',
@@ -46,12 +46,20 @@ class OrdemServicoRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge([
+        $merge = [
             'status_id'     => $this->resolveId(Status::class, $this->status),
             'categoria_id'  => $this->resolveId(Categoria::class, $this->categoria),
-            'urgencia_id'   => $this->resolveId(Urgencia::class, $this->urgencia),
-            'prioridade_id' => $this->resolveId(Prioridade::class, $this->prioridade),
-        ]);
+        ];
+
+        if ($this->filled('urgencia')) {
+            $merge['urgencia_id'] = $this->resolveId(Urgencia::class, $this->urgencia);
+        }
+
+        if ($this->filled('prioridade')) {
+            $merge['prioridade_id'] = $this->resolveId(Prioridade::class, $this->prioridade);
+        }
+
+        $this->merge($merge);
     }
 
     private function resolveId(string $model, ?string $value): ?int
