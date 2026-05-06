@@ -43,7 +43,13 @@ export default function ListaChamados() {
         page: filtros.page,
         per_page: 15,
       };
-      if (filtros.busca) params.busca = filtros.busca;
+     if (filtros.busca) {
+       if (/^\d+$/.test(filtros.busca.trim())) {
+    params.id = filtros.busca.trim();
+      } else {
+    params.busca = filtros.busca;
+      }
+      }
       if (filtros.status) params.status = filtros.status;
       if (filtros.categoria) params.categoria = filtros.categoria;
       if (filtros.urgencia) params.urgencia = filtros.urgencia;

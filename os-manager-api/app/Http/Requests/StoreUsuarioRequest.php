@@ -15,8 +15,8 @@ class StoreUsuarioRequest extends FormRequest
     {
         return [
             'nome'  => 'required|string|max:80',
-            'cpf'   => 'required|string|size:11|unique:gestoes.usuarios,cpf',
-            'email' => 'required|email|unique:gestoes.usuarios,email',
+           'cpf'   => 'required|string|size:11|unique:usuarios,cpf',
+            'email' => 'required|email|unique:usuarios,email',
             'senha' => 'required|string|min:4',
         ];
     }

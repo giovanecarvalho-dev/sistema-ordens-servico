@@ -12,7 +12,7 @@ class User extends Authenticatable implements JWTSubject
     use HasFactory, Notifiable;
 
 
-    protected $table = 'gestoes.usuarios';
+    protected $table = 'usuarios';
 
     protected $fillable = [
         'nome',
@@ -73,7 +73,7 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->belongsToMany(
             Permissao::class, 
-            'gestoes.usuario_permissoes', 
+            'usuario_permissoes',
             'usuario_id', 
             'permissao_id'
         );

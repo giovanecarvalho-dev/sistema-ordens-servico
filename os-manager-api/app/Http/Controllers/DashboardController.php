@@ -56,9 +56,9 @@ class DashboardController extends Controller
                 'resolvidos' => $item->resolvidos
             ]);
 
-        $categorias = DB::table('core.ordem_servicos as os')
-            ->join('core.categoria as c', 'os.categoria_id', '=', 'c.id') 
-            ->join('core.status as s', 'os.status_id', '=', 's.id')
+       $categorias = DB::table('ordem_servicos as os')
+    ->join('categoria as c', 'os.categoria_id', '=', 'c.id')
+    ->join('status as s', 'os.status_id', '=', 's.id')
             ->select(
                 'c.nome as categoria',
                 DB::raw('count(*) as total'),

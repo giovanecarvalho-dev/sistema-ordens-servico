@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Categoria extends Model
 {
-    // 1. Aponta para o schema e o nome exato da tabela no banco
-    protected $table = 'core.categoria'; 
+
+    protected $table = 'categoria'; 
 
     // 2. Se a sua tabela não tiver as colunas created_at e updated_at, descomente a linha abaixo:
     public $timestamps = false;

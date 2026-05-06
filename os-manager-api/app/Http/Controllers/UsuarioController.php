@@ -91,7 +91,7 @@ class UsuarioController extends Controller
 {
     $query = User::with('cargo');
 
-    // Contagem de ordens ativas baseada no relacionamento core.status
+    // Contagem de ordens ativas baseada no relacionamento status
     $query->withCount(['ordensSolicitadas as ordens_ativas' => function ($q) {
         $q->whereHas('status', function($sq) {
             $sq->where('nome', '!=', 'Fechado');
@@ -167,8 +167,8 @@ class UsuarioController extends Controller
     {
         $request->validate([
             'nome'  => 'required|string|max:80',
-            'cpf'   => 'required|string|size:11|unique:gestoes.usuarios,cpf', 
-            'email' => 'required|email|unique:gestoes.usuarios,email', 
+            'cpf'   => 'required|string|size:11|unique:usuarios,cpf',
+            'email' => 'required|email|unique:usuarios,email',
             'senha' => 'required|string|min:4',
         ]);
 
@@ -333,7 +333,7 @@ class UsuarioController extends Controller
 
         $request->validate([
             'nome'       => 'required|string|max:80',
-            'email'      => 'required|email|unique:gestoes.usuarios,email,' . $id,
+            'email' => 'required|email|unique:usuarios,email,' . $id,
             'nova_senha' => 'sometimes|nullable|string|min:4',
             'senha_atual'=> 'sometimes|nullable|string',
         ]);

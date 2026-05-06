@@ -10,7 +10,7 @@ class OrdemServico extends Model
 {
     use HasFactory;
 
-    protected $table = 'core.ordem_servicos'; 
+    protected $table = 'ordem_servicos'; 
 
     const CREATED_AT = 'criado_em';
     const UPDATED_AT = 'atualizado_em';

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Permissao extends Model
 {
     // Apontando para o schema e tabela corretos
-    protected $table = 'gestoes.permissoes';
+    protected $table = 'permissoes';
     
     // Desativando timestamps
     public $timestamps = false;
@@ -19,7 +19,7 @@ class Permissao extends Model
     {
         return $this->belongsToMany(
             Cargo::class, 
-            'gestoes.cargo_permissoes', 
+            'cargo_permissoes', 
             'permissao_id', 
             'cargo_id'
         );
@@ -30,7 +30,7 @@ class Permissao extends Model
     {
         return $this->belongsToMany(
             User::class, 
-            'gestoes.usuario_permissoes', 
+            'usuario_permissoes', 
             'permissao_id', 
             'usuario_id'
         );

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Urgencia extends Model
 {
-    protected $table = 'core.urgencia'; 
+    protected $table = 'urgencia'; 
     public $timestamps = false;
 
     protected $fillable = ['nome'];
