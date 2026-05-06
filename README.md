@@ -41,40 +41,22 @@ O projeto utiliza volumes nomeados no Docker para garantir que os dados do Postg
 
 Plataforma integrada para gestão de chamados técnicos, com API REST em Laravel e interface em Next.js, totalmente containerizada via Docker. Inclui autenticação JWT, controle de acesso por cargo, fluxo completo de OS com cálculo de tempo de pausa e código de rastreio único por chamado.
 
-> **Status:** em desenvolvimento ativo. Veja o [Roadmap](#roadmap) para próximas entregas.
+> **Status:** em desenvolvimento ativo. 
 
 ---
 
 ## Demonstração
 
-> _Substituir pelos screenshots reais após capturar._
-
 | Tela | Preview |
 |---|---|
-| Login | 
-
-![Login](docs/screenshots/01-login.png)
-
- |
-| Listagem de chamados | 
-
-![Listagem](docs/screenshots/02-listagem.png)
-
- |
-| Criação de OS | 
-
-![Criar OS](docs/screenshots/03-criar-os.png)
-
- |
-| Detalhe da OS | 
-
-![Detalhe](docs/screenshots/04-detalhe-os.png)
-
- |
-
----
-
-## 🛠️Stack
+| Login | ![Login](docs/screenshots/Login.png) |
+| Listagem de chamados | ![Listagem](docs/screenshots/ListaChamados.png) |
+| Criação de OS | ![Criar OS](docs/screenshots/AbrirChamado.png) |
+| Dashboard | ![Dashboard](docs/screenshots/Dashboard.png) |
+| Criar Usuário | ![Criar Usuário](docs/screenshots/CriarUsuario.png) |
+| Swagger Ordens | ![Swagger Ordens](docs/screenshots/SwaggerDashboardOrdens.png) |
+| Swagger Usuários | ![Swagger Usuários](docs/screenshots/SwaggerUsuarios.png) |
+## Stack
 
 **Backend**
 - PHP 8.2 + Laravel 11
