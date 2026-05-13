@@ -31,6 +31,11 @@ class User extends Authenticatable implements JWTSubject
     const CREATED_AT = 'criado_em';
     const UPDATED_AT = 'atualizado_em';
 
+    public function getAuthPasswordName()
+    {
+    return 'senha';
+    }
+
     public function getAuthPassword()
     {
         return $this->senha;

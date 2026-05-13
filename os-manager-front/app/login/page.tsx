@@ -42,7 +42,7 @@ if (resposta.status === 200) {
 }
       }
     } catch (err) {
-      alert(isCadastro ? "Erro ao criar conta. Verifique o Back-end." : "Credenciais inválidas.");
+      alert(isCadastro ? "Erro ao criar conta." : "Credenciais inválidas.");
     }
   };
 

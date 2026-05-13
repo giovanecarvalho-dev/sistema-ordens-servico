@@ -203,25 +203,32 @@ class UsuarioController extends Controller
             new OA\Response(response: 401, description: "Credenciais inválidas")
         ]
     )]
+    
     public function login(Request $request)
-    {
-        $credenciais = [
-            'cpf' => $request->cpf,
-            'password' => $request->senha
-        ];
+{
+    $request->validate([
+        'cpf'   => 'required',
+        'senha' => 'required',
+    ]);
 
-        if (!$token = auth('api')->attempt($credenciais)) {
-            return response()->json(['message' => 'Credenciais inválidas'], 401);
-        }
+    $credenciais = [
+        'cpf'      => $request->cpf,
+        'password' => $request->senha,
+    ];
 
-        // O Front-end já recebe o cargo do usuário junto com os dados do perfil, para facilitar a lógica de exibição
-        $usuario = auth('api')->user()->load('cargo');
-
+    if (!$token = auth('api')->attempt($credenciais)) {
         return response()->json([
-            'user'  => $usuario,
-            'token' => $token
-        ]);
+            'message' => 'Credenciais inválidas'
+        ], 401);
     }
+
+    $usuario = auth('api')->user()->load('cargo');
+
+    return response()->json([
+        'user'  => $usuario,
+        'token' => $token
+    ]);
+}
 
     #[OA\Post(
         path: "/api/logout",
