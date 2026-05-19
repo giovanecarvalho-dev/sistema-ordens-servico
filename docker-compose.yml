@@ -12,14 +12,14 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d os_manager_db"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d os_manager_db" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
   api:
     build:
-      context: ./os-manager-api
+      context: ./backend
       dockerfile: Dockerfile
     container_name: os_api
     restart: always
@@ -29,7 +29,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./os-manager-api:/var/www
+      - ./backend:/var/www
     environment:
       DB_CONNECTION: pgsql
       DB_HOST: db
@@ -40,13 +40,13 @@ services:
 
   front:
     build:
-      context: ./os-manager-front 
+      context: ./frontend
     container_name: os_front
     restart: always
     ports:
       - "3000:3000"
     volumes:
-      - ./os-manager-front:/app
+      - ./frontend:/app
     depends_on:
       - api
 
