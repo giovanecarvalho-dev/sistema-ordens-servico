@@ -198,10 +198,3 @@ Permissões aplicadas via middleware customizado nas rotas (`routes/api.php`).
     ├── init-db/                 # Schema inicial PostgreSQL
     └── docker-compose.yml
 
-
-##  Autor
-
-**Giovane Oliveira Carvalho**
-Desenvolvedor back-end | Estudante de ADS — ESBAM (Manaus/AM)
-
-[LinkedIn](https://linkedin.com/in/giovanecarvalho) · [GitHub](https://github.com/giovanecarvalho-dev)
