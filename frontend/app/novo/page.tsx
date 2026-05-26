@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useRouter } from 'next/navigation';
 import { CheckCircle } from 'lucide-react';
@@ -17,6 +17,23 @@ export default function NovoChamado() {
   const [sucesso, setSucesso] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+
+  const [listaCategorias, setListaCategorias] = useState<any[]>([]);
+
+  useEffect(() => {
+    api.get('/categorias')
+      .then((res) => {
+        setListaCategorias(res.data);
+        if (res.data.length > 0) {
+          setCategoria(res.data[0].nome);
+        }
+      })
+      .catch((err) => console.error("Erro ao carregar categorias", err));
+  }, []);
+
+  const categorias = listaCategorias.length ? listaCategorias : [
+    { id: 1, nome: "Rede" }, { id: 2, nome: "Acesso" }, { id: 3, nome: "Infraestrutura" }
+  ];
 
   const salvarOrdem = async (e: any) => {
     e.preventDefault();
@@ -78,7 +95,7 @@ export default function NovoChamado() {
                 setSucesso(false);
                 setTitulo('');
                 setDescricao('');
-                setCategoria('Rede');
+                setCategoria(categorias[0]?.nome || 'Rede');
                 setLocalizacao('');
                 setAnexo(null);
               }}
@@ -97,9 +114,9 @@ export default function NovoChamado() {
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Categoria *</label>
               <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className={inputClass} required>
-                <option value="Rede">Rede</option>
-                <option value="Infraestrutura">Infraestrutura</option>
-                <option value="Acesso">Acesso</option>
+                {categorias.map((c: any) => (
+                  <option key={c.id} value={c.nome}>{c.nome}</option>
+                ))}
               </select>
             </div>
           </div>

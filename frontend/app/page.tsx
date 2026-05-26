@@ -45,6 +45,25 @@ export default function ListaChamados() {
     per_page: 15
   });
 
+  // --- ESTADOS AUXILIARES (METADADOS DA API) ---
+  const [listaCategorias, setListaCategorias] = useState<any[]>([]);
+  const [listaStatus, setListaStatus] = useState<any[]>([]);
+  const [listaUrgencias, setListaUrgencias] = useState<any[]>([]);
+  const [listaPrioridades, setListaPrioridades] = useState<any[]>([]);
+
+  const categorias = listaCategorias.length ? listaCategorias : [
+    { id: 1, nome: "Rede" }, { id: 2, nome: "Acesso" }, { id: 3, nome: "Infraestrutura" }
+  ];
+  const statusList = listaStatus.length ? listaStatus : [
+    { id: 1, nome: "Novo" }, { id: 2, nome: "Em Andamento" }, { id: 3, nome: "Aguardando Peça" }, { id: 4, nome: "Pausado" }, { id: 5, nome: "Fechado" }, { id: 6, nome: "Concluído" }
+  ];
+  const urgenciasList = listaUrgencias.length ? listaUrgencias : [
+    { id: 1, nome: "Baixa" }, { id: 2, nome: "Media" }, { id: 3, nome: "Alta" }, { id: 4, nome: "Muito Alta" }
+  ];
+  const prioridadesList = listaPrioridades.length ? listaPrioridades : [
+    { id: 1, nome: "Baixa" }, { id: 2, nome: "Media" }, { id: 3, nome: "Alta" }, { id: 4, nome: "Muito Alta" }
+  ];
+
   // --- 2. ESTADOS DE INTERFACE E MODAL ---
   const [tecnicos, setTecnicos] = useState([]);
 
@@ -134,6 +153,19 @@ export default function ListaChamados() {
   }, [filtros]);
 
   useEffect(() => {
+    // Busca dados auxiliares/meta da API para evitar opções hardcoded
+    Promise.all([
+      api.get("/categorias"),
+      api.get("/status"),
+      api.get("/urgencias"),
+      api.get("/prioridades")
+    ]).then(([resCat, resStatus, resUrg, resPri]) => {
+      setListaCategorias(resCat.data);
+      setListaStatus(resStatus.data);
+      setListaUrgencias(resUrg.data);
+      setListaPrioridades(resPri.data);
+    }).catch(err => console.error("Erro ao carregar dados auxiliares da API", err));
+
     // Busca os dados atualizados do perfil diretamente da API, ignorando manipulação manual de localStorage
     api.get("/perfil")
       .then((res) => {
@@ -330,31 +362,27 @@ export default function ListaChamados() {
       <div className="flex gap-3 mb-6 flex-wrap">
         <select value={filtros.status} onChange={(e) => setFiltros({ ...filtros, status: e.target.value, page: 1 })} className={filterClass}>
           <option value="">Todos os status</option>
-          <option>Novo</option>
-          <option>Em Andamento</option>
-          <option>Pausado</option>
-          <option>Aguardando Peça</option>
-          <option>Fechado</option>
+          {statusList.map((s: any) => (
+            <option key={s.id} value={s.nome}>{s.nome}</option>
+          ))}
         </select>
         <select value={filtros.categoria} onChange={(e) => setFiltros({ ...filtros, categoria: e.target.value, page: 1 })} className={filterClass}>
           <option value="">Todas as categorias</option>
-          <option>Rede</option>
-          <option>Infraestrutura</option>
-          <option>Acesso</option>
+          {categorias.map((c: any) => (
+            <option key={c.id} value={c.nome}>{c.nome}</option>
+          ))}
         </select>
         <select value={filtros.urgencia} onChange={(e) => setFiltros({ ...filtros, urgencia: e.target.value, page: 1 })} className={filterClass}>
           <option value="">Todas as urgências</option>
-          <option>Muito Alta</option>
-          <option>Alta</option>
-          <option>Média</option>
-          <option>Baixa</option>
+          {urgenciasList.map((u: any) => (
+            <option key={u.id} value={u.nome}>{u.nome}</option>
+          ))}
         </select>
         <select value={filtros.prioridade} onChange={(e) => setFiltros({ ...filtros, prioridade: e.target.value, page: 1 })} className={filterClass}>
           <option value="">Todas as prioridades</option>
-          <option>Muito Alta</option>
-          <option>Alta</option>
-          <option>Média</option>
-          <option>Baixa</option>
+          {prioridadesList.map((p: any) => (
+            <option key={p.id} value={p.nome}>{p.nome}</option>
+          ))}
         </select>
         <select value={filtros.per_page} onChange={(e) => setFiltros({ ...filtros, per_page: Number(e.target.value), page: 1 })} className={filterClass}>
           <option value={15}>15 por página</option>
@@ -558,19 +586,17 @@ export default function ListaChamados() {
                     <div>
                       <label className="text-xs font-bold text-slate-400 uppercase">Urgência</label>
                       <select value={urgencia} onChange={(e) => setUrgencia(e.target.value)} className={selectClass}>
-                        <option>Muito Alta</option>
-                        <option>Alta</option>
-                        <option>Média</option>
-                        <option>Baixa</option>
+                        {urgenciasList.map((u: any) => (
+                          <option key={u.id} value={u.nome}>{u.nome}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-slate-400 uppercase">Prioridade</label>
                       <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className={selectClass}>
-                        <option>Muito Alta</option>
-                        <option>Alta</option>
-                        <option>Média</option>
-                        <option>Baixa</option>
+                        {prioridadesList.map((p: any) => (
+                          <option key={p.id} value={p.nome}>{p.nome}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -579,11 +605,12 @@ export default function ListaChamados() {
               <div>
                 <label className="text-xs font-bold text-slate-400 uppercase">Status</label>
                 <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
-                  {cargo === "Admin" && <option>Novo</option>}
-                  <option>Em Andamento</option>
-                  <option>Pausado</option>
-                  <option>Aguardando Peça</option>
-                  <option>Fechado</option>
+                  {statusList.map((s: any) => {
+                    if (s.nome === "Novo" && cargo !== "Admin") return null;
+                    return (
+                      <option key={s.id} value={s.nome}>{s.nome}</option>
+                    );
+                  })}
                 </select>
               </div>
 
