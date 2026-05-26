@@ -7,7 +7,23 @@ const isUrlSegura = (url: string) => {
     const parsedUrl = new URL(url);
     const apiEnvUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
     const backendUrl = new URL(apiEnvUrl);
-    return parsedUrl.origin === backendUrl.origin;
+    
+    const hostAnexo = parsedUrl.hostname.toLowerCase();
+    const hostBackend = backendUrl.hostname.toLowerCase();
+    
+    // Conjunto de domínios/hosts confiáveis
+    const hostnamesConfiaveis = new Set([
+      hostBackend,
+      'localhost',
+      '127.0.0.1'
+    ]);
+    
+    // Adiciona o hostname onde o frontend está rodando no navegador (ex: IP local ou domínio de produção)
+    if (typeof window !== 'undefined') {
+      hostnamesConfiaveis.add(window.location.hostname.toLowerCase());
+    }
+    
+    return hostnamesConfiaveis.has(hostAnexo);
   } catch {
     return url.startsWith('/') || url.startsWith('./') || url.startsWith('../');
   }
