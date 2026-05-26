@@ -43,7 +43,8 @@ class OrdemServico extends Model
         'status_nome', 
         'urgencia_nome', 
         'prioridade_nome', 
-        'categoria_nome'
+        'categoria_nome',
+        'anexo_url'
     ];
 
     /**
@@ -107,6 +108,12 @@ class OrdemServico extends Model
     public function getUrgenciaNomeAttribute() { return $this->urgencia?->nome; }
     public function getPrioridadeNomeAttribute() { return $this->prioridade?->nome; }
     public function getCategoriaNomeAttribute() { return $this->categoria?->nome; }
+
+    public function getAnexoUrlAttribute()
+    {
+        if (!$this->anexo) return null;
+        return url('storage/' . $this->anexo);
+    }
 
     // SLA
 

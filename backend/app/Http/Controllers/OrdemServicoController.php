@@ -285,6 +285,8 @@ class OrdemServicoController extends Controller
             $item = OrdemServico::where('id', is_numeric($id) ? $id : 0)->firstOrFail();
         }
 
+        \Illuminate\Support\Facades\Gate::authorize('view', $item);
+
         if (!$item->anexo) {
             return response()->json(['message' => 'Nenhum anexo encontrado'], 404);
         }
@@ -327,6 +329,13 @@ class OrdemServicoController extends Controller
             'motivo_pausa',
             'solucao'
         ]);
+
+        if ($request->hasFile('anexo')) {
+            if ($item->anexo && Storage::disk('public')->exists($item->anexo)) {
+                Storage::disk('public')->delete($item->anexo);
+            }
+            $dados['anexo'] = $request->file('anexo')->store('anexos', 'public');
+        }
 
         // Lógica de pausa
         $statusAntigo = $item->status?->nome;

@@ -13,7 +13,10 @@ class ListarOrdemServicoTest extends TestCase
     public function test_admin_pode_listar_todas_ordens()
     {
         // Arrange
-        $admin = User::factory()->admin()->create();
+        $admin = User::factory()->admin()->create([
+            'email' => 'admin_listar_todas_' . uniqid() . '@example.com',
+            'cpf' => fake()->numerify('###########'),
+        ]);
 
         $token = JWTAuth::fromUser($admin);
 
@@ -52,7 +55,10 @@ class ListarOrdemServicoTest extends TestCase
     public function test_listar_ordens_com_filtro_status()
     {
         // Arrange
-        $admin = User::factory()->admin()->create();
+        $admin = User::factory()->admin()->create([
+            'email' => 'admin_listar_filtro_' . uniqid() . '@example.com',
+            'cpf' => fake()->numerify('###########'),
+        ]);
 
         $token = JWTAuth::fromUser($admin);
 
@@ -114,7 +120,10 @@ class ListarOrdemServicoTest extends TestCase
     public function test_listagem_nao_retorna_ordens_inativas()
 {
     // Arrange
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->create([
+        'email' => 'admin_listar_nao_retorna_' . uniqid() . '@example.com',
+        'cpf' => fake()->numerify('###########'),
+    ]);
 
     $token = JWTAuth::fromUser($admin);
 
@@ -153,7 +162,10 @@ class ListarOrdemServicoTest extends TestCase
     public function test_listagem_de_ordens_inativas()
     {
         // Arrange
-        $admin = User::factory()->admin()->create();
+        $admin = User::factory()->admin()->create([
+            'email' => 'admin_listar_inativas_' . uniqid() . '@example.com',
+            'cpf' => fake()->numerify('###########'),
+        ]);
 
         $token = JWTAuth::fromUser($admin);
 

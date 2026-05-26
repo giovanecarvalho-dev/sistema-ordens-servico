@@ -9,12 +9,13 @@ class CreateUsuarioTest extends TestCase
 {
     public function test_usuario_pode_se_cadastrar()
     {
-        $cpf = fake()->numerify('###########');
+        $cpf = substr(number_format(microtime(true) * 1000000, 0, '', ''), -11);
+        $email = 'user_cadastrar_' . uniqid() . '@example.com';
 
         $response = $this->postJson('/api/usuarios', [
             'nome'  => 'João',
             'cpf'   => $cpf,
-            'email' => fake()->safeEmail(),
+            'email' => $email,
             'senha' => '1234',
         ]);
 
@@ -28,7 +29,7 @@ class CreateUsuarioTest extends TestCase
 
     public function test_nao_pode_cadastrar_usuario_com_cpf_duplicado()
     {
-        $cpf = fake()->numerify('###########');
+        $cpf = substr(number_format(microtime(true) * 1000000, 0, '', ''), -11);
 
         User::factory()->create([
             'cpf' => $cpf,
@@ -37,7 +38,7 @@ class CreateUsuarioTest extends TestCase
         $response = $this->postJson('/api/usuarios', [
             'nome'  => 'Maria',
             'cpf'   => $cpf,
-            'email' => fake()->safeEmail(),
+            'email' => 'user_cpf_dup_' . uniqid() . '@example.com',
             'senha' => '1234',
         ]);
 
@@ -50,7 +51,7 @@ class CreateUsuarioTest extends TestCase
     public function test_nao_pode_cadastrar_usuario_com_email_duplicado()
     {
     // Arrange
-    $email = fake()->safeEmail();
+    $email = 'user_email_dup_' . uniqid() . '@example.com';
 
     User::factory()->create([
         'email' => $email,
@@ -59,7 +60,7 @@ class CreateUsuarioTest extends TestCase
     // Act
     $response = $this->postJson('/api/usuarios', [
         'nome'  => 'Maria',
-        'cpf'   => fake()->numerify('###########'),
+        'cpf'   => substr(number_format(microtime(true) * 1000000, 0, '', ''), -11),
         'email' => $email,
         'senha' => '1234',
     ]);
@@ -76,8 +77,8 @@ class CreateUsuarioTest extends TestCase
     // Act
     $response = $this->postJson('/api/usuarios', [
         'nome'  => 'João',
-        'cpf'   => fake()->numerify('###########'),
-        'email' => fake()->safeEmail(),
+        'cpf'   => substr(number_format(microtime(true) * 1000000, 0, '', ''), -11),
+        'email' => 'user_senha_curta_' . uniqid() . '@example.com',
         'senha' => '12',
     ]);
 
@@ -92,8 +93,8 @@ class CreateUsuarioTest extends TestCase
 {
     // Act
     $response = $this->postJson('/api/usuarios', [
-        'cpf'   => fake()->numerify('###########'),
-        'email' => fake()->safeEmail(),
+        'cpf'   => substr(number_format(microtime(true) * 1000000, 0, '', ''), -11),
+        'email' => 'user_sem_nome_' . uniqid() . '@example.com',
         'senha' => '1234',
     ]);
 
@@ -110,7 +111,7 @@ public function test_nao_pode_cadastrar_usuario_com_cpf_invalido()
     $response = $this->postJson('/api/usuarios', [
         'nome'  => 'João',
         'cpf'   => '123',
-        'email' => fake()->safeEmail(),
+        'email' => 'user_cpf_inv_' . uniqid() . '@example.com',
         'senha' => '1234',
     ]);
 
@@ -126,7 +127,7 @@ public function test_nao_pode_cadastrar_usuario_com_email_invalido()
     // Act
     $response = $this->postJson('/api/usuarios', [
         'nome'  => 'João',
-        'cpf'   => fake()->numerify('###########'),
+        'cpf'   => substr(number_format(microtime(true) * 1000000, 0, '', ''), -11),
         'email' => 'email-invalido',
         'senha' => '1234',
     ]);

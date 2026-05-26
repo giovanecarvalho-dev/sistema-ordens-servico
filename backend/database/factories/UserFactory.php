@@ -11,12 +11,15 @@ class UserFactory extends Factory
 {
     public function definition(): array
     {
+        $uniqueNum = substr(number_format(microtime(true) * 1000000, 0, '', ''), -11);
+        $uniqueStr = uniqid();
+
         return [
             'nome' => fake()->name(),
 
-            'cpf' => fake()->numerify('###########'),
+            'cpf' => $uniqueNum,
 
-            'email' => fake()->unique()->safeEmail(),
+            'email' => 'usuario_' . $uniqueStr . '@example.com',
 
             'senha' => '123456',
 

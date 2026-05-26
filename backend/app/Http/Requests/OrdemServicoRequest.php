@@ -35,7 +35,7 @@ class OrdemServicoRequest extends FormRequest
             'categoria_id' => ['sometimes', 'nullable', 'integer', Rule::exists(Categoria::class, 'id')],
             'status'       => ['sometimes', 'nullable', 'string', Rule::exists(Status::class, 'nome')],
             'status_id'    => ['sometimes', 'nullable', 'integer', Rule::exists(Status::class, 'id')],
-            'anexo'        => ['sometimes', 'nullable', 'file', 'max:10240'],
+            'anexo'        => ['sometimes', 'nullable', 'file', 'mimes:pdf,jpeg,jpg,png', 'max:10240'],
         ]);
     }
 
@@ -48,6 +48,7 @@ class OrdemServicoRequest extends FormRequest
         'tecnico_id'    => ['sometimes', 'nullable', 'integer'],
         'motivo_pausa'  => ['sometimes', 'nullable', 'string', 'max:150'],
         'solucao'       => ['sometimes', 'nullable', 'string'],
+        'anexo'         => ['sometimes', 'nullable', 'file', 'mimes:pdf,jpeg,jpg,png', 'max:10240'],
     ]);
 }
 

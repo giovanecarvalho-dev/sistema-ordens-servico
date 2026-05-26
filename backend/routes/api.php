@@ -21,10 +21,11 @@ Route::get('/health', function () {
             'timestamp' => now()->toDateTimeString()
         ], 200);
     } catch (\Exception $e) {
+        \Log::error('Healthcheck database connection error: ' . $e->getMessage());
         return response()->json([
             'status' => 'ERROR',
             'database' => 'Disconnected',
-            'message' => $e->getMessage()
+            'message' => 'Erro interno ao conectar ao banco de dados.'
         ], 500);
     }
 });

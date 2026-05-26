@@ -28,6 +28,8 @@ export default function ListaChamados() {
   const [prioridade, setPrioridade] = useState("");
   const [solucao, setSolucao] = useState("");
   const [motivoPausa, setMotivoPausa] = useState("");
+  const [editAnexo, setEditAnexo] = useState<File | null>(null);
+  const [anexoPreview, setAnexoPreview] = useState<{url: string, osId: number} | null>(null);
 
   const [cargo, setCargo] = useState("");
   const [meuUsuarioId, setMeuUsuarioId] = useState("");
@@ -146,25 +148,43 @@ export default function ListaChamados() {
     setPrioridade(os.prioridade?.nome || os.prioridade || "Média");
     setSolucao(os.solucao || "");
     setMotivoPausa(os.motivo_pausa || "");
+    setEditAnexo(null);
   };
 
   const salvarEdicao = async (e: any) => {
     e.preventDefault();
     try {
-      const payload: any = {
-        status,
-        solucao,
-        motivo_pausa: ["Pausado", "Aguardando Peça"].includes(status) ? motivoPausa : null
-      };
+      if (editAnexo) {
+        const formData = new FormData();
+        formData.append("_method", "PUT");
+        formData.append("status", status);
+        formData.append("solucao", solucao || "");
+        if (["Pausado", "Aguardando Peça"].includes(status)) formData.append("motivo_pausa", motivoPausa || "");
+        if (cargo === "Admin") {
+          formData.append("urgencia", urgencia);
+          formData.append("prioridade", prioridade);
+          formData.append("tecnico_id", tecnicoId || "");
+        }
+        formData.append("anexo", editAnexo);
 
-      if (cargo === "Admin") {
-        payload.urgencia = urgencia;
-        payload.prioridade = prioridade;
-        payload.tecnico_id = tecnicoId || null;
+        await api.post(`/ordens/${chamadoSelecionado.id}`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+      } else {
+        const payload: any = {
+          status,
+          solucao,
+          motivo_pausa: ["Pausado", "Aguardando Peça"].includes(status) ? motivoPausa : null
+        };
+
+        if (cargo === "Admin") {
+          payload.urgencia = urgencia;
+          payload.prioridade = prioridade;
+          payload.tecnico_id = tecnicoId || null;
+        }
+
+        await api.put(`/ordens/${chamadoSelecionado.id}`, payload);
       }
-
-      await api.put(`/ordens/${chamadoSelecionado.id}`, payload);
       setChamadoSelecionado(null);
+      setEditAnexo(null);
       buscarChamados();
     } catch (err) {
       alert("Erro ao atualizar a ordem de serviço.");
@@ -251,6 +271,7 @@ export default function ListaChamados() {
   };
 
   return (
+    <>
     <div className="p-4 md:p-6 max-w-full overflow-hidden">
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -345,7 +366,14 @@ export default function ListaChamados() {
                   className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${slaStatus === "vencido" ? "border-l-4 border-red-500" : slaStatus === "alerta" ? "border-l-4 border-yellow-400" : ""}`}
                 >
                   <td className="px-2 py-3 font-mono text-blue-600 dark:text-blue-400 truncate overflow-hidden">#{os.id}</td>
-                  <td className="px-2 py-3 font-bold text-slate-800 dark:text-slate-200 truncate overflow-hidden" title={os.titulo}>{os.titulo}</td>
+                  <td className="px-2 py-3 font-bold text-slate-800 dark:text-slate-200 overflow-hidden">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate overflow-hidden">{os.titulo}</span>
+                      {os.anexo_url && (
+                        <button onClick={() => setAnexoPreview({url: os.anexo_url, osId: os.id})} className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-[9px] font-bold uppercase flex-shrink-0 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">📎 Anexo</button>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-2 py-3 overflow-hidden">
                     <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase ${categoriaCor[os.categoria?.nome || os.categoria] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
                       {os.categoria?.nome || os.categoria || "-"}
@@ -547,6 +575,15 @@ export default function ListaChamados() {
                   className={`${selectClass} h-28 resize-none text-sm`}
                 />
               </div>
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase">Anexo</label>
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setEditAnexo(e.target.files?.[0] || null)} className="mt-1 text-sm text-slate-500" />
+                {chamadoSelecionado.anexo_url && (
+                  <div className="text-[12px] mt-1">
+                    <button type="button" onClick={() => setAnexoPreview({url: chamadoSelecionado.anexo_url, osId: chamadoSelecionado.id})} className="text-blue-600 underline hover:text-blue-800 transition-colors">Visualizar anexo atual</button>
+                  </div>
+                )}
+              </div>
               <div className="flex justify-end gap-3 mt-4">
                 <button type="button" onClick={() => setChamadoSelecionado(null)} className="text-slate-400 font-bold hover:text-slate-600 dark:hover:text-slate-200">
                   CANCELAR
@@ -560,5 +597,39 @@ export default function ListaChamados() {
         </div>
       )}
     </div>
+
+      {/* MODAL DE PREVIEW DO ANEXO */}
+      {anexoPreview && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setAnexoPreview(null)}>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Visualizar Anexo</h3>
+              <div className="flex items-center gap-2">
+                <button onClick={async () => {
+                  try {
+                    const res = await api.get(`/ordens/${anexoPreview.osId}/anexo`, { responseType: 'blob' });
+                    const url = window.URL.createObjectURL(res.data);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const ext = anexoPreview.url.split('.').pop() || 'pdf';
+                    a.download = `anexo_os_${anexoPreview.osId}.${ext}`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                  } catch { alert('Erro ao baixar anexo.'); }
+                }} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors">BAIXAR</button>
+                <button onClick={() => setAnexoPreview(null)} className="px-3 py-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold transition-colors">FECHAR</button>
+              </div>
+            </div>
+            <div className="flex-1 p-4 overflow-auto flex items-center justify-center min-h-[400px]">
+              {anexoPreview.url.match(/\.(jpg|jpeg|png|gif|webp)/i) ? (
+                <img src={anexoPreview.url} alt="Anexo" className="max-w-full max-h-[70vh] object-contain rounded-lg" />
+              ) : (
+                <iframe src={anexoPreview.url} className="w-full h-[70vh] rounded-lg border-0" title="Anexo PDF" />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
