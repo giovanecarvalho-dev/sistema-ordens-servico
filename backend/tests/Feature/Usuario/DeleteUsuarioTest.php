@@ -27,8 +27,9 @@ class DeleteUsuarioTest extends TestCase
         // Assert
         $response->assertStatus(200); // O controller retorna 200 com mensagem
 
-        $this->assertDatabaseMissing('usuarios', [
+        $this->assertDatabaseHas('usuarios', [
             'id' => $user->id,
+            'ativo' => false,
         ]);
     }
 }

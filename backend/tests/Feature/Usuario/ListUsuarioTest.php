@@ -98,8 +98,9 @@ class ListUsuarioTest extends TestCase
         // Assert
         $response->assertOk();
 
-        $this->assertDatabaseMissing('usuarios', [
+        $this->assertDatabaseHas('usuarios', [
             'id' => $usuario->id,
+            'ativo' => false,
         ]);
     }
 

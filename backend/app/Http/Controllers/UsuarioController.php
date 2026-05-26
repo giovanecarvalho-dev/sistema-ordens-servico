@@ -411,7 +411,10 @@ class UsuarioController extends Controller
     public function destroy($id)
     {
         $usuario = User::findOrFail($id);
-        $usuario->delete(); //implementar soft delete
+        $usuario->update([
+            'ativo' => false,
+            'jti_token' => null, // Invalida a sessão ativa imediatamente
+        ]);
         return response()->json(['message' => 'Usuário removido com sucesso']);
     }
 }
