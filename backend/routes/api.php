@@ -43,6 +43,12 @@ Route::middleware(['auth:api', 'validate-jti'])->group(function () {
     Route::put('/usuarios/{id}/perfil', [UsuarioController::class, 'updatePerfil']);
     Route::post('/ordens', [OrdemServicoController::class, 'store']); 
     Route::get('/ordens/{id}/anexo', [OrdemServicoController::class, 'downloadAnexo']);
+    
+    // Auxiliares/Meta
+    Route::get('/categorias', [OrdemServicoController::class, 'categorias']);
+    Route::get('/status', [OrdemServicoController::class, 'status']);
+    Route::get('/urgencias', [OrdemServicoController::class, 'urgencias']);
+    Route::get('/prioridades', [OrdemServicoController::class, 'prioridades']);
 
     //tecnicos e admin
     Route::middleware('cargo:Tecnico,Admin')->group(function () {

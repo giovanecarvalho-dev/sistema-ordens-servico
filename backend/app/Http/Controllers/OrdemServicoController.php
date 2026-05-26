@@ -398,4 +398,24 @@ class OrdemServicoController extends Controller
             'message' => 'Enviado para a lixeira com sucesso'
         ], 200);
     }
+
+    public function categorias()
+    {
+        return response()->json(\App\Models\Categoria::orderBy('nome', 'asc')->get());
+    }
+
+    public function status()
+    {
+        return response()->json(\App\Models\Status::orderBy('id', 'asc')->get());
+    }
+
+    public function urgencias()
+    {
+        return response()->json(\App\Models\Urgencia::orderBy('id', 'asc')->get());
+    }
+
+    public function prioridades()
+    {
+        return response()->json(\App\Models\Prioridade::orderBy('id', 'asc')->get());
+    }
 }
