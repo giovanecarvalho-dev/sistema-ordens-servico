@@ -35,9 +35,6 @@ class OrdemServico extends Model
         'anexo',
     ];
 
-    // Carrega os objetos relacionados automaticamente 
-    protected $with = ['status', 'categoria', 'urgencia', 'prioridade']; 
-
     protected $appends = [
         'status_sla', 
         'status_nome', 
