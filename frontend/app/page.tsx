@@ -2,6 +2,17 @@
 import { useEffect, useState, useCallback } from "react";
 import api from "./services/api";
 
+const isUrlSegura = (url: string) => {
+  try {
+    const parsedUrl = new URL(url);
+    const apiEnvUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    const backendUrl = new URL(apiEnvUrl);
+    return parsedUrl.origin === backendUrl.origin;
+  } catch {
+    return url.startsWith('/') || url.startsWith('./') || url.startsWith('../');
+  }
+};
+
 export default function ListaChamados() {
   // --- 1. ESTADOS DE DADOS ---
   const [ordens, setOrdens] = useState([]);
@@ -621,7 +632,11 @@ export default function ListaChamados() {
               </div>
             </div>
             <div className="flex-1 p-4 overflow-auto flex items-center justify-center min-h-[400px]">
-              {anexoPreview.url.match(/\.(jpg|jpeg|png|gif|webp)/i) ? (
+              {!isUrlSegura(anexoPreview.url) ? (
+                <div className="text-red-500 font-bold text-sm text-center">
+                  ⚠️ URL de anexo bloqueada por motivos de segurança (domínio externo não confiável).
+                </div>
+              ) : anexoPreview.url.match(/\.(jpg|jpeg|png|gif|webp)/i) ? (
                 <img src={anexoPreview.url} alt="Anexo" className="max-w-full max-h-[70vh] object-contain rounded-lg" />
               ) : (
                 <iframe src={anexoPreview.url} className="w-full h-[70vh] rounded-lg border-0" title="Anexo PDF" />

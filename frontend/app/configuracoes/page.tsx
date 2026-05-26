@@ -32,25 +32,35 @@ export default function Configuracoes() {
       setUsuarioId(eu.id);
       setNome(eu.nome);
       setEmail(eu.email);
-      setCargo(eu.cargo?.nome || eu.cargo || '');
+      
+      const perfilCargo = eu.cargo?.nome || eu.cargo || '';
+      setCargo(perfilCargo);
+
+      // Apenas admins podem ler as configurações gerais do sistema da API
+      if (perfilCargo === 'Admin') {
+        api.get('/configuracoes').then(resCfg => {
+          const cfg = resCfg.data;
+          setNomeSistema(cfg.nome_sistema || 'Central de Suporte Técnico');
+          setSlaAlta(String(cfg.sla_alta ?? '4'));
+          setSlaMuito(String(cfg.sla_muito_alta ?? '2'));
+          setSlaMedia(String(cfg.sla_media ?? '8'));
+          setSlaBaixa(String(cfg.sla_baixa ?? '24'));
+        }).catch(err => {
+          console.error("Erro ao carregar configurações do sistema", err);
+          carregarFallbacksLocais();
+        });
+      } else {
+        carregarFallbacksLocais();
+      }
     }).catch(err => console.error("Erro ao carregar perfil", err));
 
-    // Busca configurações do sistema da API
-    api.get('/configuracoes').then(res => {
-      const cfg = res.data;
-      setNomeSistema(cfg.nome_sistema || 'Central de Suporte Técnico');
-      setSlaAlta(String(cfg.sla_alta ?? '4'));
-      setSlaMuito(String(cfg.sla_muito_alta ?? '2'));
-      setSlaMedia(String(cfg.sla_media ?? '8'));
-      setSlaBaixa(String(cfg.sla_baixa ?? '24'));
-    }).catch(() => {
-      // fallback para localStorage caso a tabela ainda não exista
+    function carregarFallbacksLocais() {
       setNomeSistema(localStorage.getItem('cfg_nomeSistema') || 'Central de Suporte Técnico');
       setSlaAlta(localStorage.getItem('cfg_slaAlta') || '4');
       setSlaMuito(localStorage.getItem('cfg_slaMuito') || '2');
       setSlaMedia(localStorage.getItem('cfg_slaMedia') || '8');
       setSlaBaixa(localStorage.getItem('cfg_slaBaixa') || '24');
-    });
+    }
   }, []);
 
   const salvarPerfil = async (e: any) => {
