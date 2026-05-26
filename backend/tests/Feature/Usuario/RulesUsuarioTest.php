@@ -53,7 +53,7 @@ class RulesUsuarioTest extends TestCase
         $response = $this->withHeader(
             'Authorization',
             "Bearer {$token}"
-        )->getJson('/api/usuarios?ativo=false');
+        )->getJson('/api/usuarios?ativo=false&per_page=100');
 
         // Assert
         $response->assertOk();

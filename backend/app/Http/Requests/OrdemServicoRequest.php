@@ -53,10 +53,15 @@ class OrdemServicoRequest extends FormRequest
 
     protected function prepareForValidation(): void
 {
-    $merge = [
-        'status_id'    => $this->resolveId(Status::class, $this->status),
-        'categoria_id' => $this->resolveId(Categoria::class, $this->categoria),
-    ];
+    $merge = [];
+
+    if ($this->filled('status')) {
+        $merge['status_id'] = $this->resolveId(Status::class, $this->status);
+    }
+
+    if ($this->filled('categoria')) {
+        $merge['categoria_id'] = $this->resolveId(Categoria::class, $this->categoria);
+    }
 
     if ($this->filled('urgencia')) {
         $merge['urgencia_id'] = $this->resolveId(Urgencia::class, $this->urgencia);

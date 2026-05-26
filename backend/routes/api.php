@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OrdemServicoController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ConfiguracaoController;
 
 //rotas públicas
 
@@ -33,7 +34,7 @@ Route::post('/login', [UsuarioController::class, 'login']);
 
 
 //protegidos
-Route::middleware('auth:api')->group(function () {
+Route::middleware(['auth:api', 'validate-jti'])->group(function () {
     
     //acesso geral para usuários autenticados (Clientes, Técnicos e Admins)
     Route::get('/perfil', [UsuarioController::class, 'me']);
@@ -57,6 +58,8 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('/ordens/{id}', [OrdemServicoController::class, 'destroy']);
         //dashboard
         Route::get('/dashboard/estatisticas', [DashboardController::class, 'estatisticas']);
-        
+        //configuracoes
+        Route::get('/configuracoes', [ConfiguracaoController::class, 'index']);
+        Route::put('/configuracoes', [ConfiguracaoController::class, 'update']);
     });
 });

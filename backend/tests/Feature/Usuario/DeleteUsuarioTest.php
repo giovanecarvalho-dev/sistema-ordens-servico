@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\DeleteUsuario;
+namespace Tests\Feature\Usuario;
 
 use App\Models\User;
 use Tests\TestCase;

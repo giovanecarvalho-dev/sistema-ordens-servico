@@ -4,7 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str; // Importante para o UUID
+use Illuminate\Support\Str; 
+use App\Models\Configuracao;
 
 class OrdemServico extends Model
 {
@@ -34,7 +35,7 @@ class OrdemServico extends Model
         'anexo',
     ];
 
-    // Carrega os objetos relacionados automaticamente (Evita N+1 queries)
+    // Carrega os objetos relacionados automaticamente 
     protected $with = ['status', 'categoria', 'urgencia', 'prioridade']; 
 
     protected $appends = [
@@ -46,9 +47,9 @@ class OrdemServico extends Model
     ];
 
     /**
-     * ==========================================
+     * 
      * BOOTED 
-     * ==========================================
+     * 
      * Garante que toda nova OS receba um código de rastreio único, usando UUID para evitar colisões.
      */
     protected static function booted()
@@ -62,9 +63,7 @@ class OrdemServico extends Model
 
 
 
-    // ==========================================
-    // RELAÇÕES
-    // ==========================================
+    // Relacionamentos
 
     public function status()
     {
@@ -102,40 +101,26 @@ class OrdemServico extends Model
                     ->orderBy('criado_em', 'desc');
     }
 
-    // ==========================================
-    // ACCESSORS metodos get para facilitar o acesso aos nomes relacionados (Evita ter que acessar $os->status->nome em várias partes do código)
-    // ==========================================
+    // Acessors para facilitar o acesso aos nomes relacionados
 
     public function getStatusNomeAttribute() { return $this->status?->nome; }
     public function getUrgenciaNomeAttribute() { return $this->urgencia?->nome; }
     public function getPrioridadeNomeAttribute() { return $this->prioridade?->nome; }
     public function getCategoriaNomeAttribute() { return $this->categoria?->nome; }
 
-    // ==========================================
-    // STATUS SLA 
-    // ==========================================
+    // SLA
 
-   public function getStatusSlaAttribute()
+    public function getStatusSlaAttribute()
     {
-        // Pegar diretamente as Foreign Keys (mais rápido, não precisa carregar o relacionamento)
-        $statusId = $this->status_id;
-        $urgenciaId = $this->urgencia_id;
+        $statusNome = $this->status?->nome;
+        $urgenciaNome = $this->urgencia?->nome;
 
-        // IDs dos status
-        $idFechado = 5; 
-        $idsPausados = [4, 5]; 
+        if ($statusNome === 'Fechado') return null;
+        if (in_array($statusNome, ['Pausado', 'Aguardando Peça'])) return 'pausado';
 
-        if ($statusId === $idFechado) return null;
-        if (in_array($statusId, $idsPausados)) return 'pausado';
+        $limitesSla = Configuracao::slaLimites();
 
-        $limitesSla = [
-            4 => 2,  
-            3 => 4,  
-            2 => 8,  
-            1 => 24, //ID e Hora
-        ];
-
-        $limiteHoras = $limitesSla[$urgenciaId] ?? null;
+        $limiteHoras = $limitesSla[$urgenciaNome] ?? null;
         if (!$limiteHoras) return null;
 
         $limiteMinutos = $limiteHoras * 60;

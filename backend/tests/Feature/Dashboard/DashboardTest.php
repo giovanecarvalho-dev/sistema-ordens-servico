@@ -7,12 +7,11 @@ use App\Models\User;
 use App\Models\Status;
 use App\Models\Categoria;
 use App\Models\OrdemServico;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class DashboardTest extends TestCase
 {
-    use DatabaseTransactions;
 
     public function test_admin_pode_visualizar_dashboard()
     {
@@ -66,6 +65,12 @@ class DashboardTest extends TestCase
             'nome' => 'Rede',
         ]);
 
+        // Captura a contagem ANTES de criar as novas OS
+        $totalAntes = OrdemServico::where('ativo', true)->count();
+        $abertosAntes = OrdemServico::where('ativo', true)
+            ->whereHas('status', fn($q) => $q->whereIn('nome', ['Novo', 'Em Andamento', 'Pausado']))
+            ->count();
+
         OrdemServico::factory()
             ->count(5)
             ->create([
@@ -84,12 +89,12 @@ class DashboardTest extends TestCase
         $response->assertOk();
 
         $this->assertEquals(
-            5,
+            $totalAntes + 5,
             $response->json('data.geral.total')
         );
 
         $this->assertEquals(
-            5,
+            $abertosAntes + 5,
             $response->json('data.geral.abertos')
         );
     }

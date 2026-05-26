@@ -23,16 +23,9 @@ class DatabaseSeeder extends Seeder
             OrdemServicoSeeder::class,
         ]);
 
-        // Cria um técnico para testes
-        User::factory()->tecnico()->create([
-            'nome' => 'Técnico de Teste',
-            'email' => 'tecnico@teste.com',
-        ]);
-
-        // Cria um usuário comum para testes
-        User::factory()->usuario()->create([
-            'nome' => 'Usuário Comum de Teste',
-            'email' => 'usuario@teste.com',
+        User::factory()->create([
+            'name' => 'Test User',
+            'email' => 'test@example.com',
         ]);
     }
 }

@@ -9,12 +9,11 @@ class Categoria extends Model
 
     protected $table = 'categoria'; 
 
-    // 2. Se a sua tabela não tiver as colunas created_at e updated_at, descomente a linha abaixo:
     public $timestamps = false;
 
     protected $fillable = ['nome'];
 
-    // 3. Relacionamento Inverso (Opcional, mas muito útil)
+    //  Relacionamento Inverso (Opcional, mas muito útil)
     // "Uma categoria tem várias Ordens de Serviço"
     public function ordensServico()
     {

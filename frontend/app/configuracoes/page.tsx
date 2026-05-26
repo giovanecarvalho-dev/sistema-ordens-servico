@@ -26,21 +26,31 @@ export default function Configuracoes() {
   const [sucessoSistema, setSucessoSistema] = useState(false);
 
   useEffect(() => {
-    // 1. Busca APENAS os dados do usuário logado (usando a nossa nova rota)
+    // Busca dados do perfil logado
     api.get('/perfil').then(res => {
       const eu = res.data;
       setUsuarioId(eu.id);
       setNome(eu.nome);
       setEmail(eu.email);
-      setCargo(eu.cargo); // Guardamos o cargo para a regra de negócio visual
+      setCargo(eu.cargo?.nome || eu.cargo || '');
     }).catch(err => console.error("Erro ao carregar perfil", err));
 
-    // Carrega configurações do sistema do localStorage
-    setNomeSistema(localStorage.getItem('cfg_nomeSistema') || 'Central de Suporte Técnico');
-    setSlaAlta(localStorage.getItem('cfg_slaAlta') || '4');
-    setSlaMuito(localStorage.getItem('cfg_slaMuito') || '2');
-    setSlaMedia(localStorage.getItem('cfg_slaMedia') || '8');
-    setSlaBaixa(localStorage.getItem('cfg_slaBaixa') || '24');
+    // Busca configurações do sistema da API
+    api.get('/configuracoes').then(res => {
+      const cfg = res.data;
+      setNomeSistema(cfg.nome_sistema || 'Central de Suporte Técnico');
+      setSlaAlta(String(cfg.sla_alta ?? '4'));
+      setSlaMuito(String(cfg.sla_muito_alta ?? '2'));
+      setSlaMedia(String(cfg.sla_media ?? '8'));
+      setSlaBaixa(String(cfg.sla_baixa ?? '24'));
+    }).catch(() => {
+      // fallback para localStorage caso a tabela ainda não exista
+      setNomeSistema(localStorage.getItem('cfg_nomeSistema') || 'Central de Suporte Técnico');
+      setSlaAlta(localStorage.getItem('cfg_slaAlta') || '4');
+      setSlaMuito(localStorage.getItem('cfg_slaMuito') || '2');
+      setSlaMedia(localStorage.getItem('cfg_slaMedia') || '8');
+      setSlaBaixa(localStorage.getItem('cfg_slaBaixa') || '24');
+    });
   }, []);
 
   const salvarPerfil = async (e: any) => {
@@ -62,15 +72,23 @@ export default function Configuracoes() {
     }
   };
 
-  const salvarSistema = (e: any) => {
+  const salvarSistema = async (e: any) => {
     e.preventDefault();
-    localStorage.setItem('cfg_nomeSistema', nomeSistema);
-    localStorage.setItem('cfg_slaAlta', slaAlta);
-    localStorage.setItem('cfg_slaMuito', slaMuito);
-    localStorage.setItem('cfg_slaMedia', slaMedia);
-    localStorage.setItem('cfg_slaBaixa', slaBaixa);
-    setSucessoSistema(true);
-    setTimeout(() => setSucessoSistema(false), 3000);
+    try {
+      await api.put('/configuracoes', {
+        nome_sistema:   nomeSistema,
+        sla_muito_alta: Number(slaMuito),
+        sla_alta:       Number(slaAlta),
+        sla_media:      Number(slaMedia),
+        sla_baixa:      Number(slaBaixa),
+      });
+      // mantém localStorage sincronizado para o nome do sistema (usado na sidebar)
+      localStorage.setItem('cfg_nomeSistema', nomeSistema);
+      setSucessoSistema(true);
+      setTimeout(() => setSucessoSistema(false), 3000);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erro ao salvar configurações.');
+    }
   };
 
   const inputClass = "w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-1 focus:ring-blue-500 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500";

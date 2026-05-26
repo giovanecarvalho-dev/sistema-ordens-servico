@@ -119,8 +119,15 @@ class OrdemServicoController extends Controller
             );
         }
 
-        if ($request->filled('tecnico_id')) {
-            $query->where('tecnico_id', $request->tecnico_id);
+        $user = $request->user();
+        if ($user->cargo?->nome === 'Tecnico') {
+            // Técnico SÓ VÊ o que está atribuído a ele, ignorando o filtro livre
+            $query->where('tecnico_id', $user->id);
+        } else {
+            // Admin ou outro cargo com permissão total pode filtrar livremente
+            if ($request->filled('tecnico_id')) {
+                $query->where('tecnico_id', $request->tecnico_id);
+            }
         }
 
         // GIN INDEX: Busca otimizada usando Trigramas no Postgres
@@ -132,7 +139,7 @@ class OrdemServicoController extends Controller
         }
 
         // Ordenar pela chave de partição (criado_em) e paginar
-        $perPage = $request->input('per_page', 15);
+        $perPage = min((int) $request->input('per_page', 15), 100);
         return response()->json(
             $query->orderBy('criado_em', 'desc')->paginate($perPage),
             200
@@ -165,7 +172,7 @@ class OrdemServicoController extends Controller
     )]
     public function store(OrdemServicoRequest $request)
     {
-        \Log::info('Store called', ['request' => $request->all(), 'user' => $request->user()]);
+
 
         $usuarioLogado = $request->user();
 
@@ -252,6 +259,8 @@ class OrdemServicoController extends Controller
             ], 404);
         }
 
+        \Illuminate\Support\Facades\Gate::authorize('view', $ordem);
+
         return response()->json($ordem, 200);
     }
 
@@ -308,6 +317,8 @@ class OrdemServicoController extends Controller
             $item = OrdemServico::where('id', is_numeric($id) ? $id : 0)->firstOrFail();
         }
 
+        \Illuminate\Support\Facades\Gate::authorize('update', $item);
+
         $dados = $request->only([
             'status_id',
             'urgencia_id',
@@ -323,7 +334,7 @@ class OrdemServicoController extends Controller
         $statusNovo = $request->status
             ?? $item->status?->nome;
 
-        $estadosPausa = ['Pausado', 'Aguardando Peça']; //hardcoded
+        $estadosPausa = ['Pausado', 'Aguardando Peça']; 
 
         if (in_array($statusNovo, $estadosPausa)) {
             if (!in_array($statusAntigo, $estadosPausa)) {
@@ -338,7 +349,7 @@ class OrdemServicoController extends Controller
 
                 $dados['pausado_em'] = null;
                 $dados['motivo_pausa'] = null;
-            } // .... 
+            }  
         }
 
         $item->update($dados);
@@ -369,6 +380,8 @@ class OrdemServicoController extends Controller
         } else {
             $item = OrdemServico::where('id', is_numeric($id) ? $id : 0)->firstOrFail();
         }
+
+        \Illuminate\Support\Facades\Gate::authorize('delete', $item);
             
         $item->update(['ativo' => false]);
 

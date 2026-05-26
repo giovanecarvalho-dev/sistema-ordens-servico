@@ -13,6 +13,7 @@ export default function ListaChamados() {
     status: "",
     categoria: "",
     urgencia: "",
+    prioridade: "",
     page: 1,
     per_page: 15
   });
@@ -54,6 +55,7 @@ export default function ListaChamados() {
       if (filtros.status) params.status = filtros.status;
       if (filtros.categoria) params.categoria = filtros.categoria;
       if (filtros.urgencia) params.urgencia = filtros.urgencia;
+      if (filtros.prioridade) params.prioridade = filtros.prioridade;
 
       // Se for técnico, a API do Laravel vai filtrar apenas os chamados dele
       if (currentCargo === "Tecnico" && currentUserId) {
@@ -90,8 +92,22 @@ export default function ListaChamados() {
   }, [filtros]);
 
   useEffect(() => {
-    setCargo(localStorage.getItem("usuarioCargo") || "");
-    setMeuUsuarioId(localStorage.getItem("usuarioId") || "");
+    // Busca os dados atualizados do perfil diretamente da API, ignorando manipulação manual de localStorage
+    api.get("/perfil")
+      .then((res) => {
+        const perfilCargo = res.data.cargo?.nome || res.data.cargo || "";
+        const perfilId = res.data.id?.toString() || "";
+        
+        setCargo(perfilCargo);
+        setMeuUsuarioId(perfilId);
+        
+        // Sincroniza o localStorage com a verdade do servidor (apenas para UX, a segurança real vem do backend)
+        localStorage.setItem("usuarioCargo", perfilCargo);
+        localStorage.setItem("usuarioId", perfilId);
+      })
+      .catch((err) => {
+        console.error("Erro ao validar perfil", err);
+      });
   }, []);
 
   // Refaz a busca na API toda vez que um filtro mudar (com um leve atraso para a digitação)
@@ -103,7 +119,7 @@ export default function ListaChamados() {
     return () => clearTimeout(delayDebounceFn);
   }, [filtros, buscarChamados]);
 
-  // Função "Burra" do Front-end: Apenas reflete o que o Back-end enviou
+  // Reflete apenas o que o back enviou
   const statusSla = (os: any) => {
     const statusNome = os.status?.nome || os.status;
     if (statusNome === "Fechado") return null;
@@ -272,14 +288,21 @@ export default function ListaChamados() {
           <option>Média</option>
           <option>Baixa</option>
         </select>
+        <select value={filtros.prioridade} onChange={(e) => setFiltros({ ...filtros, prioridade: e.target.value, page: 1 })} className={filterClass}>
+          <option value="">Todas as prioridades</option>
+          <option>Muito Alta</option>
+          <option>Alta</option>
+          <option>Média</option>
+          <option>Baixa</option>
+        </select>
         <select value={filtros.per_page} onChange={(e) => setFiltros({ ...filtros, per_page: Number(e.target.value), page: 1 })} className={filterClass}>
           <option value={15}>15 por página</option>
           <option value={30}>30 por página</option>
           <option value={50}>50 por página</option>
           <option value={100}>100 por página</option>
         </select>
-        {(filtros.status || filtros.categoria || filtros.urgencia) && (
-          <button onClick={() => setFiltros({ ...filtros, status: "", categoria: "", urgencia: "", page: 1, per_page: 15 })} className="text-xs font-bold text-red-400 hover:text-red-600 px-3">
+        {(filtros.status || filtros.categoria || filtros.urgencia || filtros.prioridade) && (
+          <button onClick={() => setFiltros({ ...filtros, status: "", categoria: "", urgencia: "", prioridade: "", page: 1, per_page: 15 })} className="text-xs font-bold text-red-400 hover:text-red-600 px-3">
             Limpar filtros
           </button>
         )}
