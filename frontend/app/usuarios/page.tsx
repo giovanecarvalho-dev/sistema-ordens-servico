@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import api from '../services/api';
+import Paginacao from '../components/Paginacao';
 
 export default function UsuariosPage() {
     const [usuarios, setUsuarios] = useState([]);
@@ -61,60 +62,6 @@ export default function UsuariosPage() {
         'Admin': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
         'Tecnico': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
         'Usuario': 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
-    };
-
-    const renderPagination = () => {
-        if (totalPaginas <= 1) return null;
-        
-        const pages = [];
-        const maxVisible = 5;
-        let start = Math.max(1, paginaAtual - Math.floor(maxVisible / 2));
-        let end = Math.min(totalPaginas, start + maxVisible - 1);
-
-        if (end - start + 1 < maxVisible) {
-            start = Math.max(1, end - maxVisible + 1);
-        }
-
-        const buttonClass = (isActive: boolean) =>
-            `w-8 h-8 flex items-center justify-center rounded transition-colors text-sm font-bold ${
-                isActive 
-                ? 'bg-blue-600 text-white shadow-md' 
-                : 'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
-            }`;
-
-        for (let i = start; i <= end; i++) {
-            pages.push(
-                <button
-                    key={i}
-                    onClick={() => setPaginaAtual(i)}
-                    className={buttonClass(paginaAtual === i)}
-                >
-                    {i}
-                </button>
-            );
-        }
-
-        return (
-            <div className="flex gap-1 items-center">
-                {start > 1 && (
-                    <>
-                        <button onClick={() => setPaginaAtual(1)} className={buttonClass(paginaAtual === 1)}>
-                            1
-                        </button>
-                        {start > 2 && <span className="px-1 text-slate-400">...</span>}
-                    </>
-                )}
-                {pages}
-                {end < totalPaginas && (
-                    <>
-                        {end < totalPaginas - 1 && <span className="px-1 text-slate-400">...</span>}
-                        <button onClick={() => setPaginaAtual(totalPaginas)} className={buttonClass(paginaAtual === totalPaginas)}>
-                            {totalPaginas}
-                        </button>
-                    </>
-                )}
-            </div>
-        );
     };
 
     return (
@@ -239,7 +186,11 @@ export default function UsuariosPage() {
                         Anterior
                     </button>
                     
-                    {renderPagination()}
+                    <Paginacao
+                        currentPage={paginaAtual}
+                        lastPage={totalPaginas}
+                        onPageChange={(page) => setPaginaAtual(page)}
+                    />
 
                     <button
                         disabled={paginaAtual >= totalPaginas}

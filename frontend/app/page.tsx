@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import api from "./services/api";
+import Paginacao from "./components/Paginacao";
 
 const isUrlSegura = (url: string) => {
   try {
@@ -288,60 +289,6 @@ export default function ListaChamados() {
 
   const ordensExibicao = Array.isArray(ordens) ? ordens : [];
 
-  const renderPagination = () => {
-    if (!meta || meta.last_page <= 1) return null;
-
-    const pages = [];
-    const maxVisible = 5;
-    let start = Math.max(1, filtros.page - Math.floor(maxVisible / 2));
-    let end = Math.min(meta.last_page, start + maxVisible - 1);
-
-    if (end - start + 1 < maxVisible) {
-      start = Math.max(1, end - maxVisible + 1);
-    }
-
-    const buttonClass = (isActive: boolean) =>
-      `w-8 h-8 flex items-center justify-center rounded-xl transition-colors text-xs font-bold ${
-        isActive
-          ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-          : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-      }`;
-
-    for (let i = start; i <= end; i++) {
-      pages.push(
-        <button
-          key={i}
-          onClick={() => setFiltros({ ...filtros, page: i })}
-          className={buttonClass(filtros.page === i)}
-        >
-          {i}
-        </button>
-      );
-    }
-
-    return (
-      <div className="flex gap-1 items-center">
-        {start > 1 && (
-          <>
-            <button onClick={() => setFiltros({ ...filtros, page: 1 })} className={buttonClass(filtros.page === 1)}>
-              1
-            </button>
-            {start > 2 && <span className="px-1 text-slate-400">...</span>}
-          </>
-        )}
-        {pages}
-        {end < meta.last_page && (
-          <>
-            {end < meta.last_page - 1 && <span className="px-1 text-slate-400">...</span>}
-            <button onClick={() => setFiltros({ ...filtros, page: meta.last_page })} className={buttonClass(filtros.page === meta.last_page)}>
-              {meta.last_page}
-            </button>
-          </>
-        )}
-      </div>
-    );
-  };
-
   return (
     <>
     <div className="p-4 md:p-6 max-w-full overflow-hidden">
@@ -542,7 +489,11 @@ export default function ListaChamados() {
             Anterior
           </button>
           
-          {renderPagination()}
+          <Paginacao
+            currentPage={filtros.page}
+            lastPage={meta.last_page}
+            onPageChange={(page) => setFiltros({ ...filtros, page })}
+          />
 
           <div className="text-center hidden md:block">
             <span className="text-xs font-black text-slate-500 uppercase tracking-widest block">
