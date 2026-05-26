@@ -120,11 +120,19 @@ class UsuarioController extends Controller
         $query->where('cpf', 'like', $request->cpf . '%');
     }
 
-    // Filtro por Nome do Cargo
+    // Filtro por Nome do Cargo (suporta múltiplos cargos separados por vírgula)
     if ($request->filled('cargo')) {
-        $query->whereHas('cargo', fn($q) => 
-            $q->where('nome', $request->cargo)
-        );
+        $cargoInput = $request->cargo;
+        if (is_string($cargoInput) && str_contains($cargoInput, ',')) {
+            $cargos = array_map('trim', explode(',', $cargoInput));
+            $query->whereHas('cargo', fn($q) => 
+                $q->whereIn('nome', $cargos)
+            );
+        } else {
+            $query->whereHas('cargo', fn($q) => 
+                $q->where('nome', $cargoInput)
+            );
+        }
     }
 
     // Busca Global (Nome, E-mail ou CPF)

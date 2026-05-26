@@ -91,15 +91,28 @@ export default function ListaChamados() {
         params.tecnico_id = currentUserId;
       }
 
-      const [resOrdens, resTecnicos] = await Promise.all([
-        api.get("/ordens", { params }),
-        api.get("/usuarios"),
-      ]);
+      // Apenas admins podem buscar a lista de usuários técnicos
+      let resTecnicos = null;
+      if (currentCargo === "Admin") {
+        try {
+          resTecnicos = await api.get("/usuarios", {
+            params: {
+              cargo: "Tecnico,Admin",
+              per_page: 100,
+              ativo: true
+            }
+          });
+        } catch (err) {
+          console.error("Erro ao carregar lista de técnicos", err);
+        }
+      }
+
+      const resOrdens = await api.get("/ordens", { params });
 
       // Laravel paginate() retorna { data: [...], current_page, last_page, per_page, total, ... }
       const resData = resOrdens.data;
       const listaOrdens = Array.isArray(resData) ? resData : (resData?.data || []);
-      const listaTecnicos = Array.isArray(resTecnicos.data) ? resTecnicos.data : (resTecnicos.data?.data || []);
+      const listaTecnicos = resTecnicos ? (Array.isArray(resTecnicos.data) ? resTecnicos.data : (resTecnicos.data?.data || [])) : [];
 
       setOrdens(listaOrdens);
       setTecnicos(listaTecnicos);
