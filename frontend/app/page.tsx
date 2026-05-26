@@ -30,6 +30,80 @@ const isUrlSegura = (url: string) => {
   }
 };
 
+const renderSlaInfo = (os: any) => {
+  if (!os || !os.sla_limite_data) return null;
+  
+  const statusSla = os.status_sla;
+  const statusNome = os.status?.nome || os.status;
+  if (statusNome === "Fechado") return null;
+
+  const deadline = new Date(os.sla_limite_data);
+  const now = new Date();
+  
+  const diffMs = deadline.getTime() - now.getTime();
+  const diffMinTotal = Math.floor(diffMs / (1000 * 60));
+  const isOverdue = diffMinTotal < 0;
+  
+  const absMin = Math.abs(diffMinTotal);
+  const horas = Math.floor(absMin / 60);
+  const minutos = absMin % 60;
+  
+  let formattedTime = "";
+  if (horas > 0) {
+    formattedTime = `${horas}h e ${minutos}min`;
+  } else {
+    formattedTime = `${minutos}min`;
+  }
+
+  let textClass = "text-green-600 dark:text-green-400";
+  let bgClass = "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800/30";
+  
+  if (statusSla === "vencido") {
+    textClass = "text-red-600 dark:text-red-400 font-bold";
+    bgClass = "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800/30";
+  } else if (statusSla === "alerta") {
+    textClass = "text-yellow-600 dark:text-yellow-400 font-bold";
+    bgClass = "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800/30";
+  } else if (statusSla === "pausado") {
+    textClass = "text-indigo-600 dark:text-indigo-400";
+    bgClass = "bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/30";
+  }
+
+  return (
+    <div className={`p-4 rounded-xl border ${bgClass} mb-6 flex flex-col gap-1.5`}>
+      <div className="flex justify-between items-center">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Controle de SLA</span>
+        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+          statusSla === "vencido" ? "bg-red-100 text-red-700" :
+          statusSla === "alerta" ? "bg-yellow-100 text-yellow-700" :
+          statusSla === "pausado" ? "bg-indigo-100 text-indigo-700" :
+          "bg-green-100 text-green-700"
+        }`}>
+          {statusSla === "vencido" ? "Vencido" :
+           statusSla === "alerta" ? "Em Alerta" :
+           statusSla === "pausado" ? "Pausado" : "No Prazo"}
+        </span>
+      </div>
+      <div className="flex justify-between items-end mt-1">
+        <div>
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase block font-semibold">Prazo de Resolução</span>
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+            {deadline.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+          </span>
+        </div>
+        <div className="text-right">
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase block font-semibold">
+            {statusSla === "pausado" ? "Contagem Suspensa" : isOverdue ? "Atrasado há" : "Tempo Restante"}
+          </span>
+          <span className={`text-sm font-black ${textClass}`}>
+            {statusSla === "pausado" ? "—" : formattedTime}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function ListaChamados() {
   // --- 1. ESTADOS DE DADOS ---
   const [ordens, setOrdens] = useState([]);
@@ -77,6 +151,9 @@ export default function ListaChamados() {
   const [motivoPausa, setMotivoPausa] = useState("");
   const [editAnexo, setEditAnexo] = useState<File | null>(null);
   const [anexoPreview, setAnexoPreview] = useState<{url: string, osId: number} | null>(null);
+  const [abaModal, setAbaModal] = useState<"comentarios" | "historico">("comentarios");
+  const [novoComentario, setNovoComentario] = useState("");
+  const [enviandoComentario, setEnviandoComentario] = useState(false);
 
   const [cargo, setCargo] = useState("");
   const [meuUsuarioId, setMeuUsuarioId] = useState("");
@@ -154,35 +231,69 @@ export default function ListaChamados() {
   }, [filtros]);
 
   useEffect(() => {
-    // Busca dados auxiliares/meta da API para evitar opções hardcoded
-    Promise.all([
-      api.get("/categorias"),
-      api.get("/status"),
-      api.get("/urgencias"),
-      api.get("/prioridades")
-    ]).then(([resCat, resStatus, resUrg, resPri]) => {
-      setListaCategorias(resCat.data);
-      setListaStatus(resStatus.data);
-      setListaUrgencias(resUrg.data);
-      setListaPrioridades(resPri.data);
-    }).catch(err => console.error("Erro ao carregar dados auxiliares da API", err));
+    // 1. Inicialização síncrona com base no localStorage para evitar atraso visual
+    const localCargo = localStorage.getItem("usuarioCargo") || "";
+    const localId = localStorage.getItem("usuarioId") || "";
+    setCargo(localCargo);
+    setMeuUsuarioId(localId);
 
-    // Busca os dados atualizados do perfil diretamente da API, ignorando manipulação manual de localStorage
-    api.get("/perfil")
-      .then((res) => {
-        const perfilCargo = res.data.cargo?.nome || res.data.cargo || "";
-        const perfilId = res.data.id?.toString() || "";
-        
-        setCargo(perfilCargo);
-        setMeuUsuarioId(perfilId);
-        
-        // Sincroniza o localStorage com a verdade do servidor (apenas para UX, a segurança real vem do backend)
-        localStorage.setItem("usuarioCargo", perfilCargo);
-        localStorage.setItem("usuarioId", perfilId);
-      })
-      .catch((err) => {
-        console.error("Erro ao validar perfil", err);
-      });
+    // Helpers de cache em sessionStorage
+    const getCachedData = (key: string) => {
+      try {
+        const val = sessionStorage.getItem(key);
+        return val ? JSON.parse(val) : null;
+      } catch { return null; }
+    };
+    const setCachedData = (key: string, val: any) => {
+      try { sessionStorage.setItem(key, JSON.stringify(val)); } catch {}
+    };
+
+    const cachedCat = getCachedData("aux_categorias");
+    const cachedStatus = getCachedData("aux_status");
+    const cachedUrg = getCachedData("aux_urgencias");
+    const cachedPri = getCachedData("aux_prioridades");
+
+    if (cachedCat && cachedStatus && cachedUrg && cachedPri) {
+      setListaCategorias(cachedCat);
+      setListaStatus(cachedStatus);
+      setListaUrgencias(cachedUrg);
+      setListaPrioridades(cachedPri);
+    } else {
+      Promise.all([
+        api.get("/categorias"),
+        api.get("/status"),
+        api.get("/urgencias"),
+        api.get("/prioridades")
+      ]).then(([resCat, resStatus, resUrg, resPri]) => {
+        setListaCategorias(resCat.data);
+        setListaStatus(resStatus.data);
+        setListaUrgencias(resUrg.data);
+        setListaPrioridades(resPri.data);
+
+        setCachedData("aux_categorias", resCat.data);
+        setCachedData("aux_status", resStatus.data);
+        setCachedData("aux_urgencias", resUrg.data);
+        setCachedData("aux_prioridades", resPri.data);
+      }).catch(err => console.error("Erro ao carregar dados auxiliares da API", err));
+    }
+
+    // Busca perfil em segundo plano apenas se ainda não estiver definido localmente
+    if (!localCargo || !localId) {
+      api.get("/perfil")
+        .then((res) => {
+          const perfilCargo = res.data.cargo?.nome || res.data.cargo || "";
+          const perfilId = res.data.id?.toString() || "";
+          
+          setCargo(perfilCargo);
+          setMeuUsuarioId(perfilId);
+          
+          localStorage.setItem("usuarioCargo", perfilCargo);
+          localStorage.setItem("usuarioId", perfilId);
+        })
+        .catch((err) => {
+          console.error("Erro ao validar perfil", err);
+        });
+    }
   }, []);
 
   // Refaz a busca na API toda vez que um filtro mudar (com um leve atraso para a digitação)
@@ -214,6 +325,8 @@ export default function ListaChamados() {
   };
 
   const abrirModalEdicao = async (os: any) => {
+    setAbaModal("comentarios");
+    setNovoComentario("");
     try {
       const res = await api.get(`/ordens/${os.id}`);
       const osDetalhes = res.data;
@@ -235,6 +348,33 @@ export default function ListaChamados() {
       setSolucao(os.solucao || "");
       setMotivoPausa(os.motivo_pausa || "");
       setEditAnexo(null);
+    }
+  };
+
+  const recarregarChamado = async (id: number) => {
+    try {
+      const res = await api.get(`/ordens/${id}`);
+      setChamadoSelecionado(res.data);
+    } catch (err) {
+      console.error("Erro ao recarregar chamado", err);
+    }
+  };
+
+  const enviarComentario = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!novoComentario.trim() || enviandoComentario) return;
+
+    setEnviandoComentario(true);
+    try {
+      await api.post(`/ordens/${chamadoSelecionado.id}/comentarios`, {
+        conteudo: novoComentario
+      });
+      setNovoComentario("");
+      await recarregarChamado(chamadoSelecionado.id);
+    } catch (err) {
+      alert("Erro ao enviar comentário.");
+    } finally {
+      setEnviandoComentario(false);
     }
   };
 
@@ -327,7 +467,8 @@ export default function ListaChamados() {
   const urgenciaCor: any = {
     "Muito Alta": "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
     Alta: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-    Média: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    "Média": "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    Media: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
     Baixa: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   };
 
@@ -375,81 +516,77 @@ export default function ListaChamados() {
       </div>
 
       <div className="flex gap-3 mb-6 flex-wrap">
-        <select value={filtros.status} onChange={(e) => setFiltros({ ...filtros, status: e.target.value, page: 1 })} className={filterClass}>
-          <option value="">Todos os status</option>
-          {statusList.map((s: any) => (
-            <option key={s.id} value={s.nome}>{s.nome}</option>
-          ))}
-        </select>
+        {cargo !== "Usuario" && (
+          <select value={filtros.status} onChange={(e) => setFiltros({ ...filtros, status: e.target.value, page: 1 })} className={filterClass}>
+            <option value="">Todos os status</option>
+            {statusList.map((s: any) => (
+              <option key={s.id} value={s.nome}>{s.nome}</option>
+            ))}
+          </select>
+        )}
         <select value={filtros.categoria} onChange={(e) => setFiltros({ ...filtros, categoria: e.target.value, page: 1 })} className={filterClass}>
           <option value="">Todas as categorias</option>
           {categorias.map((c: any) => (
             <option key={c.id} value={c.nome}>{c.nome}</option>
           ))}
         </select>
-        <select value={filtros.urgencia} onChange={(e) => setFiltros({ ...filtros, urgencia: e.target.value, page: 1 })} className={filterClass}>
-          <option value="">Todas as urgências</option>
-          {urgenciasList.map((u: any) => (
-            <option key={u.id} value={u.nome}>{u.nome}</option>
-          ))}
-        </select>
-        <select value={filtros.prioridade} onChange={(e) => setFiltros({ ...filtros, prioridade: e.target.value, page: 1 })} className={filterClass}>
-          <option value="">Todas as prioridades</option>
-          {prioridadesList.map((p: any) => (
-            <option key={p.id} value={p.nome}>{p.nome}</option>
-          ))}
-        </select>
+        {cargo !== "Usuario" && (
+          <>
+            <select value={filtros.urgencia} onChange={(e) => setFiltros({ ...filtros, urgencia: e.target.value, page: 1 })} className={filterClass}>
+              <option value="">Todas as urgências</option>
+              {urgenciasList.map((u: any) => (
+                <option key={u.id} value={u.nome}>{u.nome}</option>
+              ))}
+            </select>
+            <select value={filtros.prioridade} onChange={(e) => setFiltros({ ...filtros, prioridade: e.target.value, page: 1 })} className={filterClass}>
+              <option value="">Todas as prioridades</option>
+              {prioridadesList.map((p: any) => (
+                <option key={p.id} value={p.nome}>{p.nome}</option>
+              ))}
+            </select>
+          </>
+        )}
         <select value={filtros.per_page} onChange={(e) => setFiltros({ ...filtros, per_page: Number(e.target.value), page: 1 })} className={filterClass}>
           <option value={15}>15 por página</option>
           <option value={30}>30 por página</option>
           <option value={50}>50 por página</option>
           <option value={100}>100 por página</option>
         </select>
-        {(filtros.status || filtros.categoria || filtros.urgencia || filtros.prioridade) && (
+        {((cargo !== "Usuario" && (filtros.status || filtros.urgencia || filtros.prioridade)) || filtros.categoria) && (
           <button onClick={() => setFiltros({ ...filtros, status: "", categoria: "", urgencia: "", prioridade: "", page: 1, per_page: 15 })} className="text-xs font-bold text-red-400 hover:text-red-600 px-3">
             Limpar filtros
           </button>
         )}
       </div>
 
-      {/* TABELA COM TODAS AS COLUNAS RESTAURADAS */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-x-auto max-w-full">
-        <table className="w-full text-left text-[11px] table-fixed">
-          <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-widest">
-            <tr>
-              <th className="px-2 py-3 w-[4%]">ID</th>
-              <th className="px-2 py-3 w-[10%]">Título</th>
-              <th className="px-2 py-3 w-[7%]">Categoria</th>
-              <th className="px-2 py-3 w-[8%]">Localização</th>
-              <th className="px-2 py-3 w-[7%]">Aberto por</th>
-              <th className="px-2 py-3 w-[7%] text-center">Abertura</th>
-              <th className="px-2 py-3 w-[8%] text-center">SLA</th>
-              <th className="px-2 py-3 w-[8%] text-center">Status</th>
-              <th className="px-2 py-3 w-[8%]">Motivo</th>
-              <th className="px-2 py-3 w-[7%] text-center">Urgência</th>
-              <th className="px-2 py-3 w-[7%] text-center">Prioridade</th>
-              <th className="px-2 py-3 w-[7%]">Técnico</th>
-              <th className="px-2 py-3 w-[7%]">Solução</th>
-              <th className="px-2 py-3 w-[5%] text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {ordensExibicao.length === 0 && (
+      {/* TABELA CONDICIONAL (SIMPLIFICADA PARA CLIENTE OU COMPLETA PARA ADMIN/TECNICO) */}
+      {cargo === "Usuario" ? (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-x-auto max-w-full">
+          <table className="w-full text-left text-[11px] table-fixed">
+            <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-widest">
               <tr>
-                <td colSpan={14} className="px-6 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
-                  Nenhum chamado encontrado.
-                </td>
+                <th className="px-4 py-3 w-[45%]">Título</th>
+                <th className="px-4 py-3 w-[15%]">Categoria</th>
+                <th className="px-4 py-3 w-[15%]">Localização</th>
+                <th className="px-4 py-3 w-[12%] text-center">Data de Abertura</th>
+                <th className="px-4 py-3 w-[10%] text-center">Situação</th>
+                <th className="px-4 py-3 w-[8%] text-right">Ações</th>
               </tr>
-            )}
-            {ordensExibicao.map((os: any) => {
-              const slaStatus = statusSla(os);
-              return (
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {ordensExibicao.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
+                    Você ainda não abriu nenhum chamado.
+                  </td>
+                </tr>
+              )}
+              {ordensExibicao.map((os: any) => (
                 <tr
                   key={os.id}
-                  className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${slaStatus === "vencido" ? "border-l-4 border-red-500" : slaStatus === "alerta" ? "border-l-4 border-yellow-400" : ""}`}
+                  className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
                 >
-                  <td className="px-2 py-3 font-mono text-blue-600 dark:text-blue-400 truncate overflow-hidden">#{os.id}</td>
-                  <td className="px-2 py-3 font-bold text-slate-800 dark:text-slate-200 overflow-hidden">
+                  <td className="px-4 py-3 font-bold text-slate-800 dark:text-slate-200 overflow-hidden">
                     <div className="flex items-center gap-2">
                       <span className="truncate overflow-hidden">{os.titulo}</span>
                       {os.anexo_url && (
@@ -457,94 +594,170 @@ export default function ListaChamados() {
                       )}
                     </div>
                   </td>
-                  <td className="px-2 py-3 overflow-hidden">
+                  <td className="px-4 py-3 overflow-hidden">
                     <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase ${categoriaCor[os.categoria?.nome || os.categoria] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
                       {os.categoria?.nome || os.categoria || "-"}
                     </span>
                   </td>
-                  <td className="px-2 py-3 text-slate-500 dark:text-slate-400 text-[10px] truncate overflow-hidden">
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-[10px] truncate overflow-hidden">
                     {os.localizacao || <span className="italic text-slate-300 dark:text-slate-600">Não informada</span>}
                   </td>
-                  <td className="px-2 py-3 text-slate-500 dark:text-slate-400 text-[10px] truncate overflow-hidden">
-                    {os.usuario?.nome || "-"}
-                  </td>
-                  <td className="px-2 py-3 text-slate-500 dark:text-slate-400 text-[10px] text-center truncate overflow-hidden">
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-[10px] text-center truncate overflow-hidden">
                     {os.criado_em ? new Date(os.criado_em).toLocaleDateString("pt-BR") : "-"}
                   </td>
-                  <td className="px-2 py-3 text-center overflow-hidden">
-                    {slaStatus ? (
-                      <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase truncate ${slaStatus === "vencido" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                        : slaStatus === "alerta" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                          : slaStatus === "pausado" ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                  <td className="px-4 py-3 text-center overflow-hidden">
+                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase truncate ${(os.status?.nome || os.status) === "Fechado" 
+                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                    }`}
+                    >
+                      {(os.status?.nome || os.status) === "Fechado" ? "Resolvido" : "Em Atendimento"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right overflow-hidden">
+                    <button onClick={() => abrirModalEdicao(os)} className="text-blue-600 font-bold hover:underline text-[10px] tracking-wider uppercase">
+                      DETALHES
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-x-auto max-w-full">
+          <table className="w-full text-left text-[11px] table-fixed">
+            <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-widest">
+              <tr>
+                <th className="px-2 py-3 w-[4%]">ID</th>
+                <th className="px-2 py-3 w-[10%]">Título</th>
+                <th className="px-2 py-3 w-[7%]">Categoria</th>
+                <th className="px-2 py-3 w-[8%]">Localização</th>
+                <th className="px-2 py-3 w-[7%]">Aberto por</th>
+                <th className="px-2 py-3 w-[7%] text-center">Abertura</th>
+                <th className="px-2 py-3 w-[8%] text-center">SLA</th>
+                <th className="px-2 py-3 w-[8%] text-center">Status</th>
+                <th className="px-2 py-3 w-[8%]">Motivo</th>
+                <th className="px-2 py-3 w-[7%] text-center">Urgência</th>
+                <th className="px-2 py-3 w-[7%] text-center">Prioridade</th>
+                <th className="px-2 py-3 w-[7%]">Técnico</th>
+                <th className="px-2 py-3 w-[7%]">Solução</th>
+                <th className="px-2 py-3 w-[5%] text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {ordensExibicao.length === 0 && (
+                <tr>
+                  <td colSpan={14} className="px-6 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
+                    Nenhum chamado encontrado.
+                  </td>
+                </tr>
+              )}
+              {ordensExibicao.map((os: any) => {
+                const slaStatus = statusSla(os);
+                return (
+                  <tr
+                    key={os.id}
+                    className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${slaStatus === "vencido" ? "border-l-4 border-red-500" : slaStatus === "alerta" ? "border-l-4 border-yellow-400" : ""}`}
+                  >
+                    <td className="px-2 py-3 font-mono text-blue-600 dark:text-blue-400 truncate overflow-hidden">#{os.id}</td>
+                    <td className="px-2 py-3 font-bold text-slate-800 dark:text-slate-200 overflow-hidden">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate overflow-hidden">{os.titulo}</span>
+                        {os.anexo_url && (
+                          <button onClick={() => setAnexoPreview({url: os.anexo_url, osId: os.id})} className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-[9px] font-bold uppercase flex-shrink-0 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">📎 Anexo</button>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 overflow-hidden">
+                      <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase ${categoriaCor[os.categoria?.nome || os.categoria] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                        {os.categoria?.nome || os.categoria || "-"}
+                      </span>
+                    </td>
+                    <td className="px-2 py-3 text-slate-500 dark:text-slate-400 text-[10px] truncate overflow-hidden">
+                      {os.localizacao || <span className="italic text-slate-300 dark:text-slate-600">Não informada</span>}
+                    </td>
+                    <td className="px-2 py-3 text-slate-500 dark:text-slate-400 text-[10px] truncate overflow-hidden">
+                      {os.usuario?.nome || "-"}
+                    </td>
+                    <td className="px-2 py-3 text-slate-500 dark:text-slate-400 text-[10px] text-center truncate overflow-hidden">
+                      {os.criado_em ? new Date(os.criado_em).toLocaleDateString("pt-BR") : "-"}
+                    </td>
+                    <td className="px-2 py-3 text-center overflow-hidden">
+                      {slaStatus ? (
+                        <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase truncate ${slaStatus === "vencido" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          : slaStatus === "alerta" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            : slaStatus === "pausado" ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                              : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          }`}
+                        >
+                          {slaLabel[slaStatus]}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-300 dark:text-slate-600 italic">—</span>
+                      )}
+                    </td>
+                    <td className="px-2 py-3 text-center overflow-hidden">
+                      <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase truncate ${(os.status?.nome || os.status) === "Fechado" ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                        : ["Pausado", "Aguardando Peça"].includes(os.status?.nome || os.status) ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                          : (os.status?.nome || os.status) === "Em Andamento" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
                             : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                         }`}
                       >
-                        {slaLabel[slaStatus]}
+                        {os.status?.nome || os.status}
                       </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-300 dark:text-slate-600 italic">—</span>
-                    )}
-                  </td>
-                  <td className="px-2 py-3 text-center overflow-hidden">
-                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase truncate ${(os.status?.nome || os.status) === "Fechado" ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                      : ["Pausado", "Aguardando Peça"].includes(os.status?.nome || os.status) ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-                        : (os.status?.nome || os.status) === "Em Andamento" ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                          : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                      }`}
-                    >
-                      {os.status?.nome || os.status}
-                    </span>
-                  </td>
-                  <td className="px-2 py-3 overflow-hidden">
-                    {os.motivo_pausa ? (
-                      <span
-                        className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 block truncate"
-                        title={os.motivo_pausa}
-                      >
-                        {os.motivo_pausa}
+                    </td>
+                    <td className="px-2 py-3 overflow-hidden">
+                      {os.motivo_pausa ? (
+                        <span
+                          className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 block truncate"
+                          title={os.motivo_pausa}
+                        >
+                          {os.motivo_pausa}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-300 dark:text-slate-600 italic">—</span>
+                      )}
+                    </td>
+                    <td className="px-2 py-3 text-center overflow-hidden">
+                      <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase ${urgenciaCor[os.urgencia?.nome || os.urgencia] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                        {os.urgencia?.nome || os.urgencia || "-"}
                       </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-300 dark:text-slate-600 italic">—</span>
-                    )}
-                  </td>
-                  <td className="px-2 py-3 text-center overflow-hidden">
-                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase ${urgenciaCor[os.urgencia?.nome || os.urgencia] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
-                      {os.urgencia?.nome || os.urgencia || "-"}
-                    </span>
-                  </td>
-                  <td className="px-2 py-3 text-center overflow-hidden">
-                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase ${urgenciaCor[os.prioridade?.nome || os.prioridade] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
-                      {os.prioridade?.nome || os.prioridade || "-"}
-                    </span>
-                  </td>
-                  <td className="px-2 py-3 text-slate-500 dark:text-slate-400 text-[10px] truncate overflow-hidden">
-                    {os.tecnico?.nome || <span className="italic text-slate-300 dark:text-slate-600">Não atribuído</span>}
-                  </td>
-                  <td className="px-2 py-3 text-slate-500 dark:text-slate-400 overflow-hidden">
-                    {os.solucao ? (
-                      <span className="truncate block text-[10px]" title={os.solucao}>
-                        {os.solucao}
+                    </td>
+                    <td className="px-2 py-3 text-center overflow-hidden">
+                      <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase ${urgenciaCor[os.prioridade?.nome || os.prioridade] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                        {os.prioridade?.nome || os.prioridade || "-"}
                       </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-300 dark:text-slate-600 italic">Sem solução</span>
-                    )}
-                  </td>
-                  <td className="px-2 py-3 text-right overflow-hidden">
-                    <button onClick={() => abrirModalEdicao(os)} className="text-blue-600 font-bold mr-1 hover:underline text-[10px]">
-                      EDITAR
-                    </button>
-                    {cargo === "Admin" && (
-                      <button onClick={() => deletarChamado(os.id)} className="text-red-500 font-bold hover:underline text-[10px]">
-                        EXCLUIR
+                    </td>
+                    <td className="px-2 py-3 text-slate-500 dark:text-slate-400 text-[10px] truncate overflow-hidden">
+                      {os.tecnico?.nome || <span className="italic text-slate-300 dark:text-slate-600">Não atribuído</span>}
+                    </td>
+                    <td className="px-2 py-3 text-slate-500 dark:text-slate-400 overflow-hidden">
+                      {os.solucao ? (
+                        <span className="truncate block text-[10px]" title={os.solucao}>
+                          {os.solucao}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-300 dark:text-slate-600 italic">Sem solução</span>
+                      )}
+                    </td>
+                    <td className="px-2 py-3 text-right overflow-hidden">
+                      <button onClick={() => abrirModalEdicao(os)} className="text-blue-600 font-bold mr-1 hover:underline text-[10px]">
+                        EDITAR
                       </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                      {cargo === "Admin" && (
+                        <button onClick={() => deletarChamado(os.id)} className="text-red-500 font-bold hover:underline text-[10px]">
+                          EXCLUIR
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* PAGINAÇÃO */}
       {meta && meta.last_page > 1 && (
@@ -579,135 +792,352 @@ export default function ListaChamados() {
         </div>
       )}
 
-      {/* MODAL DE EDIÇÃO */}
+      {/* MODAL DE EDIÇÃO E DETALHES */}
       {chamadoSelecionado && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-y-auto max-h-[90vh]">
             <h3 className="text-xl font-black mb-2 text-slate-800 dark:text-white">
-              Detalhes e Edição do Chamado #{chamadoSelecionado.id}
+              {cargo === "Usuario" ? "Acompanhamento do Chamado" : `Detalhes e Edição do Chamado #${chamadoSelecionado.id}`}
             </h3>
             <p className="text-xs text-slate-400 mb-6 uppercase tracking-widest font-bold">
               {chamadoSelecionado.titulo}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Coluna da Esquerda: Formulário de Edição */}
-              <form onSubmit={salvarEdicao} className="space-y-4">
-                {cargo === "Admin" && (
-                  <>
+              {cargo === "Usuario" ? (
+                /* Coluna da Esquerda: Informações em modo de leitura para Cliente */
+                <div className="space-y-5">
+                  <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/60 space-y-4">
                     <div>
-                      <label className="text-xs font-bold text-slate-400 uppercase">Técnico</label>
-                      <select value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)} className={selectClass}>
-                        <option value="">Não atribuído</option>
-                        {tecnicos.filter((t: any) => (t.cargo?.nome || t.cargo) === "Tecnico" || (t.cargo?.nome || t.cargo) === "Admin").map((t: any) => (
-                          <option key={t.id} value={t.id}>{t.nome}</option>
-                        ))}
-                      </select>
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Categoria</span>
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-0.5 block">
+                        {chamadoSelecionado.categoria?.nome || chamadoSelecionado.categoria || "Geral"}
+                      </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Localização</span>
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 mt-0.5 block">
+                        {chamadoSelecionado.localizacao || "Não informada"}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Situação</span>
+                      <span className={`inline-block px-2 py-0.5 rounded-lg text-[9px] font-black uppercase mt-1 ${(chamadoSelecionado.status?.nome || chamadoSelecionado.status) === "Fechado"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                      }`}>
+                        {(chamadoSelecionado.status?.nome || chamadoSelecionado.status) === "Fechado" ? "Resolvido" : "Em Atendimento"}
+                      </span>
+                    </div>
+
+                    {/* Solução */}
+                    {(chamadoSelecionado.solucao || (chamadoSelecionado.status?.nome || chamadoSelecionado.status) === "Fechado") && (
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+                        <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase tracking-wider block">Solução</span>
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-200 mt-1 leading-relaxed whitespace-pre-line bg-green-50/50 dark:bg-green-950/10 p-3 rounded-xl border border-green-100/50 dark:border-green-900/20">
+                          {chamadoSelecionado.solucao || "Chamado resolvido."}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Anexo do Chamado</span>
+                    {chamadoSelecionado.anexo_url ? (
+                      <div className="text-[12px]">
+                        <button type="button" onClick={() => setAnexoPreview({url: chamadoSelecionado.anexo_url, osId: chamadoSelecionado.id})} className="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300 transition-colors font-semibold">
+                          Visualizar anexo enviado
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 italic mt-0.5">Sem anexo cadastrado</p>
+                    )}
+                  </div>
+
+                  <div className="pt-4">
+                    <button type="button" onClick={() => setChamadoSelecionado(null)} className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-3 rounded-xl font-bold text-xs tracking-wider uppercase transition-all text-center block">
+                      FECHAR
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Coluna da Esquerda: Formulário de Edição (Admin/Técnico) */
+                <form onSubmit={salvarEdicao} className="space-y-4">
+                  {cargo === "Admin" && (
+                    <>
                       <div>
-                        <label className="text-xs font-bold text-slate-400 uppercase">Urgência</label>
-                        <select value={urgencia} onChange={(e) => setUrgencia(e.target.value)} className={selectClass}>
-                          {urgenciasList.map((u: any) => (
-                            <option key={u.id} value={u.nome}>{u.nome}</option>
+                        <label className="text-xs font-bold text-slate-400 uppercase">Técnico</label>
+                        <select value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)} className={selectClass}>
+                          <option value="">Não atribuído</option>
+                          {tecnicos.filter((t: any) => (t.cargo?.nome || t.cargo) === "Tecnico" || (t.cargo?.nome || t.cargo) === "Admin").map((t: any) => (
+                            <option key={t.id} value={t.id}>{t.nome}</option>
                           ))}
                         </select>
                       </div>
-                      <div>
-                        <label className="text-xs font-bold text-slate-400 uppercase">Prioridade</label>
-                        <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className={selectClass}>
-                          {prioridadesList.map((p: any) => (
-                            <option key={p.id} value={p.nome}>{p.nome}</option>
-                          ))}
-                        </select>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs font-bold text-slate-400 uppercase">Urgência</label>
+                          <select value={urgencia} onChange={(e) => setUrgencia(e.target.value)} className={selectClass}>
+                            {urgenciasList.map((u: any) => (
+                              <option key={u.id} value={u.nome}>{u.nome}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-400 uppercase">Prioridade</label>
+                          <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className={selectClass}>
+                            {prioridadesList.map((p: any) => (
+                              <option key={p.id} value={p.nome}>{p.nome}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase">Status</label>
+                    <select value={status} onChange={(e) => setStatus(e.target.value)} disabled={cargo === "Usuario"} className={selectClass}>
+                      {statusList.map((s: any) => {
+                        if (s.nome === "Novo" && cargo !== "Admin") return null;
+                        return (
+                          <option key={s.id} value={s.nome}>{s.nome}</option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  {["Pausado", "Aguardando Peça"].includes(status) && (
+                    <div className="mt-2">
+                      <label className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase">
+                        Motivo da Pausa / Pendência
+                      </label>
+                      <textarea
+                        value={motivoPausa}
+                        onChange={(e) => setMotivoPausa(e.target.value)}
+                        disabled={cargo === "Usuario"}
+                        maxLength={150}
+                        placeholder="Descreva o motivo (máx 150 caracteres)..."
+                        className={`${selectClass} h-20 resize-none border-indigo-200 dark:border-indigo-900/50 focus:ring-indigo-500`}
+                        required
+                      />
+                      <div className="text-[10px] text-right text-slate-400 mt-1">
+                        {motivoPausa.length}/150
                       </div>
                     </div>
+                  )}
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase">Solução</label>
+                    <textarea
+                      value={solucao}
+                      onChange={(e) => setSolucao(e.target.value)}
+                      disabled={cargo === "Usuario"}
+                      placeholder="O que foi feito para resolver este chamado?"
+                      className={`${selectClass} h-28 resize-none text-sm`}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase">Anexo</label>
+                    {chamadoSelecionado.anexo_url ? (
+                      <div className="text-[12px] mt-1.5">
+                        <button type="button" onClick={() => setAnexoPreview({url: chamadoSelecionado.anexo_url, osId: chamadoSelecionado.id})} className="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300 transition-colors font-semibold">
+                          Visualizar anexo atual
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 italic mt-1.5">Sem anexo cadastrado</p>
+                    )}
+                  </div>
+                  <div className="flex justify-end gap-3 mt-4">
+                    {cargo === "Usuario" ? (
+                      <button type="button" onClick={() => setChamadoSelecionado(null)} className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-6 py-2.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all">
+                        FECHAR
+                      </button>
+                    ) : (
+                      <>
+                        <button type="button" onClick={() => setChamadoSelecionado(null)} className="text-slate-400 font-bold hover:text-slate-600 dark:hover:text-slate-200 text-xs tracking-wider uppercase">
+                          CANCELAR
+                        </button>
+                        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/20 text-xs tracking-wider uppercase transition-all">
+                          SALVAR
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </form>
+              )}
+
+              {/* Coluna da Direita: Histórico e Discussão */}
+              <div className="border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 md:pl-8 pt-6 md:pt-0">
+                {cargo === "Usuario" ? (
+                  /* APENAS CHAT PARA O CLIENTE */
+                  <div className="flex flex-col h-[400px]">
+                    <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
+                      Mensagens e Discussão
+                    </h4>
+                    {/* Lista de comentários */}
+                    <div className="flex-1 space-y-3 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800 mb-4">
+                      {(!chamadoSelecionado.comentarios || chamadoSelecionado.comentarios.length === 0) ? (
+                        <p className="text-xs text-slate-400 dark:text-slate-500 italic py-4">Nenhuma mensagem enviada.</p>
+                      ) : (
+                        chamadoSelecionado.comentarios.map((c: any) => {
+                          const isMe = String(c.usuario_id) === String(meuUsuarioId);
+                          return (
+                            <div key={c.id} className={`flex flex-col max-w-[85%] ${isMe ? "ml-auto items-end" : "mr-auto items-start"}`}>
+                              <span className="text-[9px] font-bold text-slate-400 mb-0.5">
+                                {c.usuario_nome} <span className="font-normal">({c.usuario_cargo})</span>
+                              </span>
+                              <div className={`p-3 rounded-2xl text-xs leading-relaxed ${
+                                isMe 
+                                  ? "bg-blue-600 text-white rounded-tr-none" 
+                                  : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-200/50 dark:border-slate-700/50"
+                              }`}>
+                                {c.conteudo}
+                              </div>
+                              <span className="text-[8px] text-slate-400 mt-0.5 font-medium">
+                                {new Date(c.criado_em).toLocaleDateString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Formulário de envio de comentário */}
+                    <form onSubmit={enviarComentario} className="mt-auto flex gap-2 border-t border-slate-150 dark:border-slate-800/80 pt-3">
+                      <input
+                        type="text"
+                        value={novoComentario}
+                        onChange={(e) => setNovoComentario(e.target.value)}
+                        placeholder="Digite sua mensagem..."
+                        maxLength={500}
+                        className="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-850 dark:text-slate-150"
+                        required
+                      />
+                      <button
+                        type="submit"
+                        disabled={enviandoComentario || !novoComentario.trim()}
+                        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition-colors"
+                      >
+                        {enviandoComentario ? "Enviando..." : "Enviar"}
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  /* ESTRUTURA ORIGINAL COM SLA E ABAS SWITCHER PARA ADMIN/TECNICO */
+                  <>
+                    {renderSlaInfo(chamadoSelecionado)}
+
+                    {/* Abas Switcher */}
+                    <div className="flex border-b border-slate-200 dark:border-slate-800 mb-4 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setAbaModal("comentarios")}
+                        className={`pb-2 text-xs font-black uppercase tracking-wider transition-colors relative ${
+                          abaModal === "comentarios"
+                            ? "text-blue-600 dark:text-blue-400"
+                            : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                        }`}
+                      >
+                        Discussão ({chamadoSelecionado.comentarios?.length || 0})
+                        {abaModal === "comentarios" && (
+                          <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbaModal("historico")}
+                        className={`pb-2 text-xs font-black uppercase tracking-wider transition-colors relative ${
+                          abaModal === "historico"
+                            ? "text-blue-600 dark:text-blue-400"
+                            : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                        }`}
+                      >
+                        Histórico ({chamadoSelecionado.historicos?.length || 0})
+                        {abaModal === "historico" && (
+                          <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+                        )}
+                      </button>
+                    </div>
+
+                    {abaModal === "comentarios" && (
+                      <div className="flex flex-col h-[400px]">
+                        {/* Lista de comentários */}
+                        <div className="flex-1 space-y-3 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800 mb-4">
+                          {(!chamadoSelecionado.comentarios || chamadoSelecionado.comentarios.length === 0) ? (
+                            <p className="text-xs text-slate-400 dark:text-slate-500 italic py-4">Nenhuma mensagem enviada.</p>
+                          ) : (
+                            chamadoSelecionado.comentarios.map((c: any) => {
+                              const isMe = String(c.usuario_id) === String(meuUsuarioId);
+                              return (
+                                <div key={c.id} className={`flex flex-col max-w-[85%] ${isMe ? "ml-auto items-end" : "mr-auto items-start"}`}>
+                                  <span className="text-[9px] font-bold text-slate-400 mb-0.5">
+                                    {c.usuario_nome} <span className="font-normal">({c.usuario_cargo})</span>
+                                  </span>
+                                  <div className={`p-3 rounded-2xl text-xs leading-relaxed ${
+                                    isMe 
+                                      ? "bg-blue-600 text-white rounded-tr-none" 
+                                      : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-200/50 dark:border-slate-700/50"
+                                  }`}>
+                                    {c.conteudo}
+                                  </div>
+                                  <span className="text-[8px] text-slate-400 mt-0.5 font-medium">
+                                    {new Date(c.criado_em).toLocaleDateString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                  </span>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        {/* Formulário de envio de comentário */}
+                        <form onSubmit={enviarComentario} className="mt-auto flex gap-2 border-t border-slate-150 dark:border-slate-800/80 pt-3">
+                          <input
+                            type="text"
+                            value={novoComentario}
+                            onChange={(e) => setNovoComentario(e.target.value)}
+                            placeholder="Digite sua mensagem..."
+                            maxLength={500}
+                            className="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-850 dark:text-slate-150"
+                            required
+                          />
+                          <button
+                            type="submit"
+                            disabled={enviandoComentario || !novoComentario.trim()}
+                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition-colors"
+                          >
+                            {enviandoComentario ? "Enviando..." : "Enviar"}
+                          </button>
+                        </form>
+                      </div>
+                    )}
+
+                    {abaModal === "historico" && (
+                      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
+                        {(!chamadoSelecionado.historicos || chamadoSelecionado.historicos.length === 0) ? (
+                          <p className="text-xs text-slate-400 dark:text-slate-500 italic">Nenhum registro de histórico.</p>
+                        ) : (
+                          [...chamadoSelecionado.historicos].reverse().map((h: any) => (
+                            <div key={h.id} className="relative pl-6 border-l border-blue-500/30 pb-4 last:pb-0">
+                              <div className="absolute -left-[6px] top-1.5 w-3 h-3 rounded-full bg-blue-500 ring-4 ring-blue-100 dark:ring-blue-900/30" />
+                              <span className="text-[10px] font-black text-blue-500 uppercase tracking-wider block">
+                                {h.acao}
+                              </span>
+                              <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 font-semibold leading-relaxed">
+                                {h.descricao}
+                              </p>
+                              <span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium block mt-1">
+                                Por: {h.usuario?.nome || 'Sistema'} • {new Date(h.criado_em || h.data).toLocaleString('pt-BR')}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
-                <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase">Status</label>
-                  <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
-                    {statusList.map((s: any) => {
-                      if (s.nome === "Novo" && cargo !== "Admin") return null;
-                      return (
-                        <option key={s.id} value={s.nome}>{s.nome}</option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                {["Pausado", "Aguardando Peça"].includes(status) && (
-                  <div className="mt-2">
-                    <label className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase">
-                      Motivo da Pausa / Pendência
-                    </label>
-                    <textarea
-                      value={motivoPausa}
-                      onChange={(e) => setMotivoPausa(e.target.value)}
-                      maxLength={150}
-                      placeholder="Descreva o motivo (máx 150 caracteres)..."
-                      className={`${selectClass} h-20 resize-none border-indigo-200 dark:border-indigo-900/50 focus:ring-indigo-500`}
-                      required
-                    />
-                    <div className="text-[10px] text-right text-slate-400 mt-1">
-                      {motivoPausa.length}/150
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase">Solução</label>
-                  <textarea
-                    value={solucao}
-                    onChange={(e) => setSolucao(e.target.value)}
-                    placeholder="O que foi feito para resolver este chamado?"
-                    className={`${selectClass} h-28 resize-none text-sm`}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase">Anexo</label>
-                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setEditAnexo(e.target.files?.[0] || null)} className="mt-1 text-sm text-slate-500" />
-                  {chamadoSelecionado.anexo_url && (
-                    <div className="text-[12px] mt-1">
-                      <button type="button" onClick={() => setAnexoPreview({url: chamadoSelecionado.anexo_url, osId: chamadoSelecionado.id})} className="text-blue-600 underline hover:text-blue-800 transition-colors">Visualizar anexo atual</button>
-                    </div>
-                  )}
-                </div>
-                <div className="flex justify-end gap-3 mt-4">
-                  <button type="button" onClick={() => setChamadoSelecionado(null)} className="text-slate-400 font-bold hover:text-slate-600 dark:hover:text-slate-200 text-xs tracking-wider uppercase">
-                    CANCELAR
-                  </button>
-                  <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/20 text-xs tracking-wider uppercase transition-all">
-                    SALVAR
-                  </button>
-                </div>
-              </form>
-
-              {/* Coluna da Direita: Histórico */}
-              <div className="border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 md:pl-8 pt-6 md:pt-0">
-                <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
-                  Histórico do Chamado
-                </h4>
-                <div className="space-y-4 max-h-[420px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
-                  {(!chamadoSelecionado.historicos || chamadoSelecionado.historicos.length === 0) ? (
-                    <p className="text-xs text-slate-400 dark:text-slate-500 italic">Nenhum registro de histórico.</p>
-                  ) : (
-                    [...chamadoSelecionado.historicos].reverse().map((h: any) => (
-                      <div key={h.id} className="relative pl-6 border-l border-blue-500/30 pb-4 last:pb-0">
-                        <div className="absolute -left-[6px] top-1.5 w-3 h-3 rounded-full bg-blue-500 ring-4 ring-blue-100 dark:ring-blue-900/30" />
-                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-wider block">
-                          {h.acao}
-                        </span>
-                        <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 font-semibold leading-relaxed">
-                          {h.descricao}
-                        </p>
-                        <span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium block mt-1">
-                          Por: {h.usuario?.nome || 'Sistema'} • {new Date(h.criado_em || h.data).toLocaleString('pt-BR')}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
               </div>
             </div>
           </div>

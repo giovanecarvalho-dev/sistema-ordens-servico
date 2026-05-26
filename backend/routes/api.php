@@ -5,6 +5,7 @@ use App\Http\Controllers\OrdemServicoController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ConfiguracaoController;
+use App\Http\Controllers\NotificacaoController;
 
 //rotas públicas
 
@@ -43,6 +44,9 @@ Route::middleware(['auth:api', 'validate-jti'])->group(function () {
     Route::put('/usuarios/{id}/perfil', [UsuarioController::class, 'updatePerfil']);
     Route::post('/ordens', [OrdemServicoController::class, 'store']); 
     Route::get('/ordens/{id}/anexo', [OrdemServicoController::class, 'downloadAnexo']);
+    Route::post('/ordens/{id}/comentarios', [OrdemServicoController::class, 'addComentario']);
+    Route::get('/ordens', [OrdemServicoController::class, 'index']); 
+    Route::get('/ordens/{id}', [OrdemServicoController::class, 'show']);
     
     // Auxiliares/Meta
     Route::get('/categorias', [OrdemServicoController::class, 'categorias']);
@@ -50,10 +54,13 @@ Route::middleware(['auth:api', 'validate-jti'])->group(function () {
     Route::get('/urgencias', [OrdemServicoController::class, 'urgencias']);
     Route::get('/prioridades', [OrdemServicoController::class, 'prioridades']);
 
+    // Notificações
+    Route::get('/notificacoes', [NotificacaoController::class, 'index']);
+    Route::put('/notificacoes/ler-todas', [NotificacaoController::class, 'lerTodas']);
+    Route::put('/notificacoes/{id}/ler', [NotificacaoController::class, 'ler']);
+
     //tecnicos e admin
     Route::middleware('cargo:Tecnico,Admin')->group(function () {
-        Route::get('/ordens', [OrdemServicoController::class, 'index']); 
-        Route::get('/ordens/{id}', [OrdemServicoController::class, 'show']);
         Route::put('/ordens/{id}', [OrdemServicoController::class, 'update']);
     });
 

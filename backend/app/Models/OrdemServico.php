@@ -41,7 +41,8 @@ class OrdemServico extends Model
         'urgencia_nome', 
         'prioridade_nome', 
         'categoria_nome',
-        'anexo_url'
+        'anexo_url',
+        'sla_limite_data'
     ];
 
     /**
@@ -99,6 +100,12 @@ class OrdemServico extends Model
                     ->orderBy('criado_em', 'desc');
     }
 
+    public function comentarios()
+    {
+        return $this->hasMany(OrdemServicoComentario::class, 'ordem_servico_id')
+                    ->orderBy('criado_em', 'asc');
+    }
+
     // Acessors para facilitar o acesso aos nomes relacionados
 
     public function getStatusNomeAttribute() { return $this->status?->nome; }
@@ -139,5 +146,24 @@ class OrdemServico extends Model
         if ($porcentagem >= 0.75) return 'alerta';
 
         return 'ok';
+    }
+
+    public function getSlaLimiteDataAttribute()
+    {
+        $urgenciaNome = $this->urgencia?->nome;
+        $limitesSla = Configuracao::slaLimites();
+        $limiteHoras = $limitesSla[$urgenciaNome] ?? null;
+
+        if (!$limiteHoras) return null;
+
+        // Garante que o criado_em é um objeto Carbon para realizar as operações
+        $criado = \Carbon\Carbon::parse($this->criado_em);
+        $deadline = $criado->copy()->addHours($limiteHoras);
+
+        if ($this->tempo_pausado_minutos) {
+            $deadline->addMinutes($this->tempo_pausado_minutos);
+        }
+
+        return $deadline->toIso8601String();
     }
 }

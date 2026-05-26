@@ -105,6 +105,8 @@ class UsuarioController extends Controller
 
     if ($request->has('ativo')) {
         $query->where('ativo', $request->boolean('ativo'));
+    } else {
+        $query->where('ativo', true);
     }
 
     // Filtros Textuais Específicos

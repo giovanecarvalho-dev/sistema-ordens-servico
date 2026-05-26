@@ -1,12 +1,15 @@
 'use client'
 import { useEffect, useState } from 'react';
 import api from '../services/api';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 export default function Estatisticas() {
   const [dados, setDados] = useState<any>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     api.get('/dashboard/estatisticas')
       .then(res => {
         setDados(res.data.data);
@@ -22,9 +25,15 @@ export default function Estatisticas() {
   }, []);
 
   if (erro) return <div className="p-8 text-red-500 font-bold bg-red-50 min-h-screen flex items-center justify-center">{erro}</div>;
-  if (!dados) return <div className="p-8 text-slate-500 font-bold min-h-screen flex items-center justify-center">Carregando métricas...</div>;
+  if (!dados || !mounted) return <div className="p-8 text-slate-500 font-bold min-h-screen flex items-center justify-center">Carregando métricas...</div>;
 
   const { geral, top_tecnicos, categorias } = dados;
+
+  const dataGrafico = (categorias || []).map((cat: any) => ({
+    name: cat.categoria,
+    "Em Aberto": cat.abertos,
+    "Resolvidos": Math.max(0, cat.total - cat.abertos),
+  }));
 
   const catCor: any = {
     'Rede': 'bg-purple-500',
@@ -129,25 +138,54 @@ export default function Estatisticas() {
         {/* CARD 5: POR CATEGORIA */}
         <div className={`${card} md:col-span-2`}>
           <h3 className="text-[10px] md:text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest">Chamados por Categoria</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-            {categorias.map((cat: any) => (
-              <div key={cat.categoria} className="space-y-1 md:space-y-2">
-                <div className="flex justify-between text-[10px] md:text-xs font-bold">
-                  <span className="text-slate-600 dark:text-slate-300">{cat.categoria}</span>
-                  <span className="text-slate-400">{cat.total} total</span>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            {/* Barras de progresso à esquerda */}
+            <div className="space-y-4">
+              {categorias.map((cat: any) => (
+                <div key={cat.categoria} className="space-y-1 md:space-y-2">
+                  <div className="flex justify-between text-[10px] md:text-xs font-bold">
+                    <span className="text-slate-600 dark:text-slate-300">{cat.categoria}</span>
+                    <span className="text-slate-400 font-bold">{cat.total} total</span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 md:h-3 rounded-full overflow-hidden">
+                    <div
+                      className={`${catCor[cat.categoria] || 'bg-gray-500'} h-full transition-all duration-1000`}
+                      style={{ width: `${geral.total > 0 ? (cat.total / geral.total) * 100 : 0}%` }}
+                    ></div>
+                  </div>
+                  <div className="text-[9px] md:text-[10px] text-slate-400">
+                    {cat.abertos} em aberto • {Math.max(0, cat.total - cat.abertos)} resolvidos
+                  </div>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 md:h-3 rounded-full overflow-hidden">
-                  <div
-                    className={`${catCor[cat.categoria] || 'bg-gray-500'} h-full transition-all duration-1000`}
-                    style={{ width: `${geral.total > 0 ? (cat.total / geral.total) * 100 : 0}%` }}
-                  ></div>
-                </div>
-                <div className="text-[9px] md:text-[10px] text-slate-400">{cat.abertos} em aberto</div>
-              </div>
-            ))}
-            {categorias.length === 0 && (
-              <p className="text-[10px] md:text-xs text-slate-400 italic">Nenhuma categoria registrada.</p>
-            )}
+              ))}
+              {categorias.length === 0 && (
+                <p className="text-[10px] md:text-xs text-slate-400 italic">Nenhuma categoria registrada.</p>
+              )}
+            </div>
+
+            {/* Gráfico do Recharts à direita */}
+            <div className="h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dataGrafico} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                      border: '1px solid rgba(51, 65, 85, 0.5)',
+                      borderRadius: '12px',
+                      color: '#f8fafc',
+                      fontSize: '11px',
+                    }}
+                    itemStyle={{ color: '#f8fafc' }}
+                  />
+                  <Legend verticalAlign="top" height={32} iconType="circle" iconSize={6} wrapperStyle={{ fontSize: '10px' }} />
+                  <Bar dataKey="Em Aberto" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Em Aberto" />
+                  <Bar dataKey="Resolvidos" fill="#10b981" radius={[4, 4, 0, 0]} name="Resolvidos" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 

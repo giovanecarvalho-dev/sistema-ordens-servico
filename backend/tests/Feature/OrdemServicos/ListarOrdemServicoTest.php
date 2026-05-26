@@ -195,4 +195,37 @@ class ListarOrdemServicoTest extends TestCase
             $ids
         );
     }
+
+    public function test_usuario_comum_so_lista_proprios_chamados()
+    {
+        // Arrange
+        $usuario1 = User::factory()->usuario()->create();
+        $usuario2 = User::factory()->usuario()->create();
+
+        $token1 = JWTAuth::fromUser($usuario1);
+
+        $osPropria = OrdemServico::factory()->create([
+            'usuario_id' => $usuario1->id,
+            'ativo' => true,
+        ]);
+
+        $osAlheia = OrdemServico::factory()->create([
+            'usuario_id' => $usuario2->id,
+            'ativo' => true,
+        ]);
+
+        // Act
+        $response = $this->withHeader(
+            'Authorization',
+            "Bearer {$token1}"
+        )->getJson('/api/ordens?per_page=100');
+
+        // Assert
+        $response->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->toArray();
+
+        $this->assertContains($osPropria->id, $ids);
+        $this->assertNotContains($osAlheia->id, $ids);
+    }
 }

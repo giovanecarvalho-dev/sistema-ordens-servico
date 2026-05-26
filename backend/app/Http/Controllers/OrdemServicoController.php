@@ -120,9 +120,14 @@ class OrdemServicoController extends Controller
         }
 
         $user = $request->user();
-        if ($user->cargo?->nome === 'Tecnico') {
+        $userCargo = is_string($user->cargo) ? $user->cargo : ($user->cargo?->nome ?? '');
+
+        if ($userCargo === 'Tecnico') {
             // Técnico SÓ VÊ o que está atribuído a ele, ignorando o filtro livre
             $query->where('tecnico_id', $user->id);
+        } elseif ($userCargo === 'Usuario') {
+            // Cliente comum SÓ VÊ os chamados abertos por ele mesmo
+            $query->where('usuario_id', $user->id);
         } else {
             // Admin ou outro cargo com permissão total pode filtrar livremente
             if ($request->filled('tecnico_id')) {
@@ -249,7 +254,8 @@ class OrdemServicoController extends Controller
             'usuario', 'tecnico',
             'status', 'categoria',
             'urgencia', 'prioridade',
-            'historicos.usuario'
+            'historicos.usuario',
+            'comentarios.usuario'
         ]);
 
         // Verifica se o que veio na URL é um UUID válido
@@ -373,6 +379,7 @@ class OrdemServicoController extends Controller
         
         $antigoStatus = $item->status?->nome;
         $antigoTecnico = $item->tecnico?->nome ?? 'Não atribuído';
+        $antigoTecnicoId = $item->tecnico_id;
         $antigaUrgencia = $item->urgencia?->nome;
         $antigaPrioridade = $item->prioridade?->nome;
 
@@ -380,6 +387,17 @@ class OrdemServicoController extends Controller
 
         // Recarrega as relações atualizadas
         $item->load(['status', 'tecnico', 'urgencia', 'prioridade']);
+
+        if ($antigoTecnicoId != $item->tecnico_id && !empty($item->tecnico_id)) {
+            \App\Models\Notificacao::create([
+                'usuario_id' => $item->tecnico_id,
+                'ordem_servico_id' => $item->id,
+                'titulo' => 'Nova OS atribuída',
+                'mensagem' => "Você foi atribuído à ordem de serviço #{$item->id}: '{$item->titulo}'",
+                'lida' => false,
+                'criado_em' => now()
+            ]);
+        }
 
         $alteracoes = [];
         if ($antigoStatus !== $item->status?->nome) {
@@ -471,5 +489,45 @@ class OrdemServicoController extends Controller
     public function prioridades()
     {
         return response()->json(\App\Models\Prioridade::orderBy('id', 'asc')->get());
+    }
+
+    public function addComentario(\Illuminate\Http\Request $request, $id)
+    {
+        if (\Illuminate\Support\Str::isUuid($id)) {
+            $ordem = OrdemServico::where('codigo_rastreio', $id)->first();
+        } else {
+            $ordem = OrdemServico::where('id', is_numeric($id) ? $id : 0)->first();
+        }
+
+        if (!$ordem) {
+            return response()->json(['message' => 'Ordem de serviço não encontrada.'], 404);
+        }
+
+        $user = $request->user();
+        $userCargo = is_string($user->cargo) ? $user->cargo : ($user->cargo?->nome ?? '');
+
+        // Autorização: Apenas criador da OS, técnico atribuído ou Admin podem comentar
+        if ($userCargo !== 'Admin' && $ordem->usuario_id !== $user->id && $ordem->tecnico_id !== $user->id) {
+            return response()->json(['message' => 'Você não tem permissão para comentar nesta ordem de serviço.'], 403);
+        }
+
+        $request->validate([
+            'conteudo' => 'required|string|max:1000'
+        ]);
+
+        $comentario = $ordem->comentarios()->create([
+            'usuario_id' => $user->id,
+            'conteudo' => $request->conteudo
+        ]);
+
+        // Registrar no histórico da OS
+        $ordem->historicos()->create([
+            'usuario_id' => $user->id,
+            'acao'       => 'Comentado',
+            'descricao'  => 'Comentário adicionado por ' . $user->nome . ': ' . \Illuminate\Support\Str::limit($request->conteudo, 60),
+            'criado_em'  => now()
+        ]);
+
+        return response()->json($comentario->load('usuario'), 201);
     }
 }

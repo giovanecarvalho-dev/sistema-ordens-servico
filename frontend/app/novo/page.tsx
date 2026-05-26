@@ -21,9 +21,24 @@ export default function NovoChamado() {
   const [listaCategorias, setListaCategorias] = useState<any[]>([]);
 
   useEffect(() => {
+    try {
+      const cached = sessionStorage.getItem("aux_categorias");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setListaCategorias(parsed);
+        if (parsed.length > 0) {
+          setCategoria(parsed[0].nome);
+        }
+        return;
+      }
+    } catch {}
+
     api.get('/categorias')
       .then((res) => {
         setListaCategorias(res.data);
+        try {
+          sessionStorage.setItem("aux_categorias", JSON.stringify(res.data));
+        } catch {}
         if (res.data.length > 0) {
           setCategoria(res.data[0].nome);
         }

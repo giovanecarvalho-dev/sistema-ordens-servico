@@ -46,67 +46,72 @@ if (resposta.status === 200) {
     }
   };
 
+  const inputClass = "w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400 dark:placeholder-slate-500";
+  const labelClass = "text-[10px] font-bold text-slate-700 dark:text-slate-400 uppercase tracking-widest";
+
   return (
-    <div className="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200">
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">
-          {isCadastro ? 'Novo Usuário' : 'Central de Suporte Técnico'}
-        </h1>
-        <p className="text-[10px] text-slate-500 mt-2 uppercase tracking-[0.2em] font-bold">
-          {isCadastro ? 'Crie sua credencial de acesso' : 'Identifique-se para continuar'}
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {isCadastro && (
-          <>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">Nome Completo</label>
-              <input
-                required type="text" value={nome} onChange={(e) => setNome(e.target.value)}
-                placeholder="Digite seu nome"
-                className="w-full p-3 bg-gray-50 border border-slate-300 rounded-lg text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">E-mail</label>
-              <input
-                required type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com"
-                className="w-full p-3 bg-gray-50 border border-slate-300 rounded-lg text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400"
-              />
-            </div>
-          </>
-        )}
-
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">CPF</label>
-          <input
-  required type="text" value={cpf}
-  onChange={(e) => setCpf(e.target.value.replace(/\D/g, ''))}
-  placeholder="00000000000" maxLength={11}
-  className="w-full p-3 bg-gray-50 border border-slate-300 rounded-lg text-sm font-mono text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400"
-/>
+    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
+      <div className="bg-white dark:bg-slate-900 p-10 rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 dark:border-slate-800">
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">
+            {isCadastro ? 'Novo Usuário' : 'Central de Suporte Técnico'}
+          </h1>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-[0.2em] font-bold">
+            {isCadastro ? 'Crie sua credencial de acesso' : 'Identifique-se para continuar'}
+          </p>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">Senha</label>
-          <input
-            required type="password" value={senha} onChange={(e) => setSenha(e.target.value)}
-            placeholder="••••••••"
-            className="w-full p-3 bg-gray-50 border border-slate-300 rounded-lg text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400"
-          />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {isCadastro && (
+            <>
+              <div className="space-y-1">
+                <label className={labelClass}>Nome Completo</label>
+                <input
+                  required type="text" value={nome} onChange={(e) => setNome(e.target.value)}
+                  placeholder="Digite seu nome"
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className={labelClass}>E-mail</label>
+                <input
+                  required type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  className={inputClass}
+                />
+              </div>
+            </>
+          )}
+
+          <div className="space-y-1">
+            <label className={labelClass}>CPF</label>
+            <input
+              required type="text" value={cpf}
+              onChange={(e) => setCpf(e.target.value.replace(/\D/g, ''))}
+              placeholder="00000000000" maxLength={11}
+              className={`${inputClass} font-mono`}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className={labelClass}>Senha</label>
+            <input
+              required type="password" value={senha} onChange={(e) => setSenha(e.target.value)}
+              placeholder="••••••••"
+              className={inputClass}
+            />
+          </div>
+
+          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg uppercase text-xs tracking-widest mt-4 cursor-pointer">
+            {isCadastro ? 'Cadastrar' : 'Entrar no Sistema'}
+          </button>
+        </form>
+
+        <div className="mt-8 text-center border-t border-slate-100 dark:border-slate-800 pt-6">
+          <button type="button" onClick={() => setIsCadastro(!isCadastro)} className="text-xs font-bold text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 uppercase tracking-widest cursor-pointer">
+            {isCadastro ? 'Já tenho conta. Fazer Login.' : 'Não possui acesso? Cadastre-se.'}
+          </button>
         </div>
-
-        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg uppercase text-xs tracking-widest mt-4">
-          {isCadastro ? 'Cadastrar' : 'Entrar no Sistema'}
-        </button>
-      </form>
-
-      <div className="mt-8 text-center border-t border-gray-100 pt-6">
-        <button type="button" onClick={() => setIsCadastro(!isCadastro)} className="text-xs font-bold text-slate-500 hover:text-blue-600 uppercase tracking-widest">
-          {isCadastro ? 'Já tenho conta. Fazer Login.' : 'Não possui acesso? Cadastre-se.'}
-        </button>
       </div>
     </div>
   );
