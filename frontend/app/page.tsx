@@ -213,15 +213,29 @@ export default function ListaChamados() {
     }
   };
 
-  const abrirModalEdicao = (os: any) => {
-    setChamadoSelecionado(os);
-    setStatus(os.status?.nome || os.status);
-    setTecnicoId(os.tecnico_id || "");
-    setUrgencia(os.urgencia?.nome || os.urgencia || "Média");
-    setPrioridade(os.prioridade?.nome || os.prioridade || "Média");
-    setSolucao(os.solucao || "");
-    setMotivoPausa(os.motivo_pausa || "");
-    setEditAnexo(null);
+  const abrirModalEdicao = async (os: any) => {
+    try {
+      const res = await api.get(`/ordens/${os.id}`);
+      const osDetalhes = res.data;
+      setChamadoSelecionado(osDetalhes);
+      setStatus(osDetalhes.status?.nome || osDetalhes.status || "Novo");
+      setTecnicoId(osDetalhes.tecnico_id || "");
+      setUrgencia(osDetalhes.urgencia?.nome || osDetalhes.urgencia || "Média");
+      setPrioridade(osDetalhes.prioridade?.nome || osDetalhes.prioridade || "Média");
+      setSolucao(osDetalhes.solucao || "");
+      setMotivoPausa(osDetalhes.motivo_pausa || "");
+      setEditAnexo(null);
+    } catch (err) {
+      console.error("Erro ao carregar detalhes do chamado", err);
+      setChamadoSelecionado(os);
+      setStatus(os.status?.nome || os.status);
+      setTecnicoId(os.tecnico_id || "");
+      setUrgencia(os.urgencia?.nome || os.urgencia || "Média");
+      setPrioridade(os.prioridade?.nome || os.prioridade || "Média");
+      setSolucao(os.solucao || "");
+      setMotivoPausa(os.motivo_pausa || "");
+      setEditAnexo(null);
+    }
   };
 
   const salvarEdicao = async (e: any) => {
@@ -514,103 +528,134 @@ export default function ListaChamados() {
       {/* MODAL DE EDIÇÃO */}
       {chamadoSelecionado && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-y-auto max-h-[90vh]">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-y-auto max-h-[90vh]">
             <h3 className="text-xl font-black mb-2 text-slate-800 dark:text-white">
-              Editar Chamado #{chamadoSelecionado.id}
+              Detalhes e Edição do Chamado #{chamadoSelecionado.id}
             </h3>
             <p className="text-xs text-slate-400 mb-6 uppercase tracking-widest font-bold">
               {chamadoSelecionado.titulo}
             </p>
-            <form onSubmit={salvarEdicao} className="space-y-4">
-              {cargo === "Admin" && (
-                <>
-                  <div>
-                    <label className="text-xs font-bold text-slate-400 uppercase">Técnico</label>
-                    <select value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)} className={selectClass}>
-                      <option value="">Não atribuído</option>
-                      {tecnicos.filter((t: any) => (t.cargo?.nome || t.cargo) === "Tecnico" || (t.cargo?.nome || t.cargo) === "Admin").map((t: any) => (
-                        <option key={t.id} value={t.id}>{t.nome}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-slate-400 uppercase">Urgência</label>
-                      <select value={urgencia} onChange={(e) => setUrgencia(e.target.value)} className={selectClass}>
-                        {urgenciasList.map((u: any) => (
-                          <option key={u.id} value={u.nome}>{u.nome}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-slate-400 uppercase">Prioridade</label>
-                      <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className={selectClass}>
-                        {prioridadesList.map((p: any) => (
-                          <option key={p.id} value={p.nome}>{p.nome}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </>
-              )}
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase">Status</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
-                  {statusList.map((s: any) => {
-                    if (s.nome === "Novo" && cargo !== "Admin") return null;
-                    return (
-                      <option key={s.id} value={s.nome}>{s.nome}</option>
-                    );
-                  })}
-                </select>
-              </div>
 
-              {["Pausado", "Aguardando Peça"].includes(status) && (
-                <div className="mt-2">
-                  <label className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase">
-                    Motivo da Pausa / Pendência
-                  </label>
-                  <textarea
-                    value={motivoPausa}
-                    onChange={(e) => setMotivoPausa(e.target.value)}
-                    maxLength={150}
-                    placeholder="Descreva o motivo (máx 150 caracteres)..."
-                    className={`${selectClass} h-20 resize-none border-indigo-200 dark:border-indigo-900/50 focus:ring-indigo-500`}
-                    required
-                  />
-                  <div className="text-[10px] text-right text-slate-400 mt-1">
-                    {motivoPausa.length}/150
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Coluna da Esquerda: Formulário de Edição */}
+              <form onSubmit={salvarEdicao} className="space-y-4">
+                {cargo === "Admin" && (
+                  <>
+                    <div>
+                      <label className="text-xs font-bold text-slate-400 uppercase">Técnico</label>
+                      <select value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)} className={selectClass}>
+                        <option value="">Não atribuído</option>
+                        {tecnicos.filter((t: any) => (t.cargo?.nome || t.cargo) === "Tecnico" || (t.cargo?.nome || t.cargo) === "Admin").map((t: any) => (
+                          <option key={t.id} value={t.id}>{t.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-slate-400 uppercase">Urgência</label>
+                        <select value={urgencia} onChange={(e) => setUrgencia(e.target.value)} className={selectClass}>
+                          {urgenciasList.map((u: any) => (
+                            <option key={u.id} value={u.nome}>{u.nome}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-400 uppercase">Prioridade</label>
+                        <select value={prioridade} onChange={(e) => setPrioridade(e.target.value)} className={selectClass}>
+                          {prioridadesList.map((p: any) => (
+                            <option key={p.id} value={p.nome}>{p.nome}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </>
+                )}
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase">Status</label>
+                  <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
+                    {statusList.map((s: any) => {
+                      if (s.nome === "Novo" && cargo !== "Admin") return null;
+                      return (
+                        <option key={s.id} value={s.nome}>{s.nome}</option>
+                      );
+                    })}
+                  </select>
                 </div>
-              )}
 
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase">Solução</label>
-                <textarea
-                  value={solucao}
-                  onChange={(e) => setSolucao(e.target.value)}
-                  placeholder="O que foi feito para resolver este chamado?"
-                  className={`${selectClass} h-28 resize-none text-sm`}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-400 uppercase">Anexo</label>
-                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setEditAnexo(e.target.files?.[0] || null)} className="mt-1 text-sm text-slate-500" />
-                {chamadoSelecionado.anexo_url && (
-                  <div className="text-[12px] mt-1">
-                    <button type="button" onClick={() => setAnexoPreview({url: chamadoSelecionado.anexo_url, osId: chamadoSelecionado.id})} className="text-blue-600 underline hover:text-blue-800 transition-colors">Visualizar anexo atual</button>
+                {["Pausado", "Aguardando Peça"].includes(status) && (
+                  <div className="mt-2">
+                    <label className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase">
+                      Motivo da Pausa / Pendência
+                    </label>
+                    <textarea
+                      value={motivoPausa}
+                      onChange={(e) => setMotivoPausa(e.target.value)}
+                      maxLength={150}
+                      placeholder="Descreva o motivo (máx 150 caracteres)..."
+                      className={`${selectClass} h-20 resize-none border-indigo-200 dark:border-indigo-900/50 focus:ring-indigo-500`}
+                      required
+                    />
+                    <div className="text-[10px] text-right text-slate-400 mt-1">
+                      {motivoPausa.length}/150
+                    </div>
                   </div>
                 )}
+
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase">Solução</label>
+                  <textarea
+                    value={solucao}
+                    onChange={(e) => setSolucao(e.target.value)}
+                    placeholder="O que foi feito para resolver este chamado?"
+                    className={`${selectClass} h-28 resize-none text-sm`}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase">Anexo</label>
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setEditAnexo(e.target.files?.[0] || null)} className="mt-1 text-sm text-slate-500" />
+                  {chamadoSelecionado.anexo_url && (
+                    <div className="text-[12px] mt-1">
+                      <button type="button" onClick={() => setAnexoPreview({url: chamadoSelecionado.anexo_url, osId: chamadoSelecionado.id})} className="text-blue-600 underline hover:text-blue-800 transition-colors">Visualizar anexo atual</button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-end gap-3 mt-4">
+                  <button type="button" onClick={() => setChamadoSelecionado(null)} className="text-slate-400 font-bold hover:text-slate-600 dark:hover:text-slate-200 text-xs tracking-wider uppercase">
+                    CANCELAR
+                  </button>
+                  <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/20 text-xs tracking-wider uppercase transition-all">
+                    SALVAR
+                  </button>
+                </div>
+              </form>
+
+              {/* Coluna da Direita: Histórico */}
+              <div className="border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 md:pl-8 pt-6 md:pt-0">
+                <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
+                  Histórico do Chamado
+                </h4>
+                <div className="space-y-4 max-h-[420px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
+                  {(!chamadoSelecionado.historicos || chamadoSelecionado.historicos.length === 0) ? (
+                    <p className="text-xs text-slate-400 dark:text-slate-500 italic">Nenhum registro de histórico.</p>
+                  ) : (
+                    [...chamadoSelecionado.historicos].reverse().map((h: any) => (
+                      <div key={h.id} className="relative pl-6 border-l border-blue-500/30 pb-4 last:pb-0">
+                        <div className="absolute -left-[6px] top-1.5 w-3 h-3 rounded-full bg-blue-500 ring-4 ring-blue-100 dark:ring-blue-900/30" />
+                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-wider block">
+                          {h.acao}
+                        </span>
+                        <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 font-semibold leading-relaxed">
+                          {h.descricao}
+                        </p>
+                        <span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium block mt-1">
+                          Por: {h.usuario?.nome || 'Sistema'} • {new Date(h.criado_em || h.data).toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-              <div className="flex justify-end gap-3 mt-4">
-                <button type="button" onClick={() => setChamadoSelecionado(null)} className="text-slate-400 font-bold hover:text-slate-600 dark:hover:text-slate-200">
-                  CANCELAR
-                </button>
-                <button type="submit" className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-500/20">
-                  SALVAR
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

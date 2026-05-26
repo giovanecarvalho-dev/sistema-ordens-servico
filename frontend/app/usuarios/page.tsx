@@ -33,6 +33,10 @@ export default function UsuariosPage() {
     }, [paginaAtual, itensPorPagina]);
 
     const alterarCargo = async (userId: number, novoCargo: string) => {
+        if (!confirm(`Tem certeza de que deseja alterar o cargo deste usuário para "${novoCargo}"?`)) {
+            buscarUsuarios();
+            return;
+        }
         try {
             const res = await api.put(`/usuarios/${userId}`, { cargo: novoCargo });
             const usuarioAtualizado = res.data;
@@ -41,6 +45,7 @@ export default function UsuariosPage() {
             );
         } catch (err) {
             alert("Erro ao atualizar cargo.");
+            buscarUsuarios();
         }
     };
 

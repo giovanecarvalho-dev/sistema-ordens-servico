@@ -209,8 +209,15 @@ class OrdemServicoController extends Controller
             'ativo'         => true,
         ]);
 
+        $novaOrdem->historicos()->create([
+            'usuario_id' => $usuarioLogado->id,
+            'acao'       => 'Criado',
+            'descricao'  => 'Chamado aberto por ' . $usuarioLogado->nome,
+            'criado_em'  => now()
+        ]);
+
         return response()->json(
-            $novaOrdem->load(['usuario', 'tecnico', 'status', 'categoria', 'urgencia', 'prioridade']), //.
+            $novaOrdem->load(['usuario', 'tecnico', 'status', 'categoria', 'urgencia', 'prioridade']), 
             201
         );
     }
@@ -241,7 +248,8 @@ class OrdemServicoController extends Controller
         $query = OrdemServico::with([
             'usuario', 'tecnico',
             'status', 'categoria',
-            'urgencia', 'prioridade'
+            'urgencia', 'prioridade',
+            'historicos.usuario'
         ]);
 
         // Verifica se o que veio na URL é um UUID válido
@@ -361,10 +369,49 @@ class OrdemServicoController extends Controller
             }  
         }
 
+        $usuarioLogado = $request->user();
+        
+        $antigoStatus = $item->status?->nome;
+        $antigoTecnico = $item->tecnico?->nome ?? 'Não atribuído';
+        $antigaUrgencia = $item->urgencia?->nome;
+        $antigaPrioridade = $item->prioridade?->nome;
+
         $item->update($dados);
 
+        // Recarrega as relações atualizadas
+        $item->load(['status', 'tecnico', 'urgencia', 'prioridade']);
+
+        $alteracoes = [];
+        if ($antigoStatus !== $item->status?->nome) {
+            $alteracoes[] = "Status alterado de '{$antigoStatus}' para '{$item->status?->nome}'";
+        }
+        if ($antigoTecnico !== ($item->tecnico?->nome ?? 'Não atribuído')) {
+            $alteracoes[] = "Técnico alterado de '{$antigoTecnico}' para '" . ($item->tecnico?->nome ?? 'Não atribuído') . "'";
+        }
+        if ($antigaUrgencia !== $item->urgencia?->nome) {
+            $alteracoes[] = "Urgência alterada de '{$antigaUrgencia}' para '{$item->urgencia?->nome}'";
+        }
+        if ($antigaPrioridade !== $item->prioridade?->nome) {
+            $alteracoes[] = "Prioridade alterada de '{$antigaPrioridade}' para '{$item->prioridade?->nome}'";
+        }
+        if ($request->filled('solucao')) {
+            $alteracoes[] = "Solução adicionada/atualizada";
+        }
+        if ($request->hasFile('anexo')) {
+            $alteracoes[] = "Novo anexo adicionado";
+        }
+
+        if (count($alteracoes) > 0) {
+            $item->historicos()->create([
+                'usuario_id' => $usuarioLogado->id,
+                'acao'       => 'Atualizado',
+                'descricao'  => 'Atualizações por ' . $usuarioLogado->nome . ': ' . implode(', ', $alteracoes),
+                'criado_em'  => now()
+            ]);
+        }
+
         return response()->json(
-            $item->load(['usuario', 'tecnico', 'status', 'categoria', 'urgencia', 'prioridade']), //alterar pelo ID do Banco de dados
+            $item->load(['usuario', 'tecnico', 'status', 'categoria', 'urgencia', 'prioridade', 'historicos.usuario']),
             200
         );
     }
@@ -393,6 +440,13 @@ class OrdemServicoController extends Controller
         \Illuminate\Support\Facades\Gate::authorize('delete', $item);
             
         $item->update(['ativo' => false]);
+            
+        $item->historicos()->create([
+            'usuario_id' => request()->user()->id,
+            'acao'       => 'Excluído',
+            'descricao'  => 'Chamado excluído logicamente por ' . request()->user()->nome,
+            'criado_em'  => now()
+        ]);
 
         return response()->json([
             'message' => 'Enviado para a lixeira com sucesso'
