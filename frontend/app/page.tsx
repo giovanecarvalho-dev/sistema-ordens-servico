@@ -278,6 +278,52 @@ export default function ListaChamados() {
     }
   };
 
+  const exportarCSV = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (filtros.busca) params.append("busca", filtros.busca);
+      if (filtros.status) params.append("status", filtros.status);
+      if (filtros.categoria) params.append("categoria", filtros.categoria);
+      if (filtros.urgencia) params.append("urgencia", filtros.urgencia);
+      if (filtros.prioridade) params.append("prioridade", filtros.prioridade);
+      params.append("per_page", "1000");
+
+      const res = await api.get(`/ordens?${params.toString()}`);
+      const dadosExportar = res.data.data || res.data || [];
+
+      if (dadosExportar.length === 0) {
+        alert("Nenhum chamado encontrado para exportar.");
+        return;
+      }
+
+      const cabecalho = ["ID", "Titulo", "Dono", "Tecnico", "Status", "Categoria", "Urgencia", "Prioridade", "Criado Em"];
+      const linhas = dadosExportar.map((os: any) => [
+        os.id,
+        `"${(os.titulo || "").replace(/"/g, '""')}"`,
+        `"${(os.usuario?.nome || "").replace(/"/g, '""')}"`,
+        `"${(os.tecnico?.nome || "Não atribuído").replace(/"/g, '""')}"`,
+        `"${(os.status?.nome || os.status || "").replace(/"/g, '""')}"`,
+        `"${(os.categoria?.nome || os.categoria || "").replace(/"/g, '""')}"`,
+        `"${(os.urgencia?.nome || os.urgencia || "").replace(/"/g, '""')}"`,
+        `"${(os.prioridade?.nome || os.prioridade || "").replace(/"/g, '""')}"`,
+        os.criado_em || os.created_at || ""
+      ]);
+
+      const conteudoCSV = "\uFEFF" + [cabecalho.join(","), ...linhas.map((l: any) => l.join(","))].join("\n");
+      const blob = new Blob([conteudoCSV], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `exportacao_chamados_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Erro ao exportar dados", err);
+      alert("Erro ao exportar dados.");
+    }
+  };
+
   const urgenciaCor: any = {
     "Muito Alta": "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
     Alta: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
@@ -311,13 +357,21 @@ export default function ListaChamados() {
           <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter">Gestão de Chamados</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">Visualize e gerencie as ordens de serviço.</p>
         </div>
-        <input
-          type="text"
-          placeholder="Filtrar por ID ou título..."
-          className={`${filterClass} w-64`}
-          value={filtros.busca}
-          onChange={(e) => setFiltros({ ...filtros, busca: e.target.value, page: 1 })}
-        />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportarCSV}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-500/20"
+          >
+            Exportar CSV
+          </button>
+          <input
+            type="text"
+            placeholder="Filtrar por ID ou título..."
+            className={`${filterClass} w-64`}
+            value={filtros.busca}
+            onChange={(e) => setFiltros({ ...filtros, busca: e.target.value, page: 1 })}
+          />
+        </div>
       </div>
 
       <div className="flex gap-3 mb-6 flex-wrap">
