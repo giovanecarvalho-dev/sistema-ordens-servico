@@ -181,6 +181,8 @@ class UsuarioController extends Controller
             'email'    => $request->email,
             'senha'    => Hash::make($request->senha),
             'cargo_id' => $cargoId, 
+            'jti_token'=> \Illuminate\Support\Str::uuid()->toString(),
+            'jti_token_created_at' => now(),
         ]);
 
         return response()->json($usuario->load('cargo'), 201);
@@ -205,36 +207,51 @@ class UsuarioController extends Controller
     )]
     
     public function login(Request $request)
-{
-    $request->validate([
-        'cpf'   => 'required',
-        'senha' => 'required',
-    ]);
+    {
+        $request->validate([
+            'cpf'   => 'required',
+            'senha' => 'required',
+        ]);
 
-    $usuario = User::where('cpf', $request->cpf)->first();
+        $usuario = User::where('cpf', $request->cpf)->first();
 
-    if (!$usuario || !$usuario->ativo) {
+        if (!$usuario || !$usuario->ativo) {
+            return response()->json([
+                'message' => 'Usuário inativo ou inexistente'
+            ], 401);
+        }
+
+        $credenciais = [
+            'cpf'      => $request->cpf,
+            'password' => $request->senha,
+        ];
+
+        if (!$token = auth('api')->attempt($credenciais)) {
+            return response()->json([
+                'message' => 'Credenciais inválidas'
+            ], 401);
+        }
+
+        //Uma sessão por usuario
+        //Gerar novo JTI (JWT ID) único para esta sessão
+        //Invalidar qualquer token anterior deste usuário
+        $usuario->update([
+            'jti_token' => \Illuminate\Support\Str::uuid()->toString(),
+            'jti_token_created_at' => now(),
+        ]);
+
+        // Invalidar o token temporário do attempt() (ele carrega o JTI antigo)
+        auth('api')->invalidate(true);
+
+        // Gerar um token novo — login() chama getJWTCustomClaims() no $usuario atualizado,
+        // garantindo que o JTI no token bata com o JTI no banco
+        $token = auth('api')->login($usuario);
+
         return response()->json([
-            'message' => 'Usuário inativo ou inexistente'
-        ], 401);
+            'user'  => auth('api')->user()->load('cargo'),
+            'token' => $token
+        ]);
     }
-
-    $credenciais = [
-        'cpf'      => $request->cpf,
-        'password' => $request->senha,
-    ];
-
-    if (!$token = auth('api')->attempt($credenciais)) {
-        return response()->json([
-            'message' => 'Credenciais inválidas'
-        ], 401);
-    }
-
-    return response()->json([
-        'user'  => auth('api')->user()->load('cargo'),
-        'token' => $token
-    ]);
-}
 
     #[OA\Post(
         path: "/api/logout",
@@ -248,9 +265,21 @@ class UsuarioController extends Controller
     )]
     public function logout(Request $request)
     {
-        auth('api')->logout(); 
+        // Obter usuário antes de fazer logout
+        $user = auth('api')->user();
+        
+        // Fazer logout (revoga o token)
+        auth('api')->logout();
+        
+        // Limpar JTI do banco (sessão invalidada)
+        if ($user) {
+            $user->update([
+                'jti_token' => null,
+                'jti_token_created_at' => null,
+            ]);
+        }
 
-        return response()->json(['message' => 'Todos os acessos foram revogados']);
+        return response()->json(['message' => 'Logout realizado com sucesso']);
     }
 
     #[OA\Put(

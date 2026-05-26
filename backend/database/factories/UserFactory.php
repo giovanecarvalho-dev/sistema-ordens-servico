@@ -26,6 +26,11 @@ class UserFactory extends Factory
             'cargo_id' => 1,
 
             'ativo' => true,
+
+            // Simula o estado pós-login: o jti_token é gerado no login real
+            // e precisa existir para que JWTAuth::fromUser() consiga montar o token nos testes
+            'jti_token' => \Illuminate\Support\Str::uuid()->toString(),
+            'jti_token_created_at' => now(),
         ];
     }
 

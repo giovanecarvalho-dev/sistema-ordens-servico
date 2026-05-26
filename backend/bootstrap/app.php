@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'cargo' => \App\Http\Middleware\CheckPermissao::class,
+            'validate-jti' => \App\Http\Middleware\ValidateJtiToken::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

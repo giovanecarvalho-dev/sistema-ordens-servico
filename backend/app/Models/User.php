@@ -21,11 +21,15 @@ class User extends Authenticatable implements JWTSubject
         'senha',
         'cargo_id', 
         'ativo',
+        'jti_token',
+        'jti_token_created_at',
     ];
 
     protected $hidden = [
         'senha',
         'remember_token',
+        'jti_token',
+        'jti_token_created_at',
     ];
 
     const CREATED_AT = 'criado_em';
@@ -49,9 +53,7 @@ class User extends Authenticatable implements JWTSubject
         ];
     }
 
-    // ==========================================
-    // RELACIONAMENTOS COM ORDEM DE SERVIÇO
-    // ==========================================
+    //relacionamento com OS
     public function ordensSolicitadas()
     {
         return $this->hasMany(OrdemServico::class, 'usuario_id')
@@ -65,9 +67,7 @@ class User extends Authenticatable implements JWTSubject
                     ->orderBy('criado_em', 'desc');
     }
 
-    // ==========================================
-    // GESTÃO DE ACESSOS
-    // ==========================================
+    //relacionamento com Cargo
 
     public function cargo()
     {
@@ -103,9 +103,7 @@ class User extends Authenticatable implements JWTSubject
         return $this->cargo ? $this->cargo->permissoes()->where('nome', $nomePermissao)->exists() : false;
     }
 
-    // ==========================================
-    // MÉTODOS JWT
-    // ==========================================
+    // metodos JWT
 
     public function getJWTIdentifier()
     {
@@ -116,7 +114,8 @@ class User extends Authenticatable implements JWTSubject
     {
         return [
             'nome'  => $this->nome,
-            'cargo' => $this->cargo?->nome
+            'cargo' => $this->cargo?->nome,
+            'jti'   => $this->jti_token
         ];
     }
 }
