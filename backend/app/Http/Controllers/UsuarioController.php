@@ -173,14 +173,8 @@ class UsuarioController extends Controller
             new OA\Response(response: 422, description: "Erro de validação")
         ]
     )]
-    public function store(Request $request)
+    public function store(\App\Http\Requests\StoreUsuarioRequest $request)
     {
-        $request->validate([
-            'nome'  => 'required|string|max:80',
-            'cpf'   => 'required|string|size:11|unique:usuarios,cpf',
-            'email' => 'required|email|unique:usuarios,email',
-            'senha' => 'required|string|min:4',
-        ]);
 
         // INTEGRAÇÃO COM CARGOS: Pega o ID do 'Usuario' no banco
         $cargoId = Cargo::where('nome', 'Usuario')->value('id');
@@ -216,12 +210,8 @@ class UsuarioController extends Controller
         ]
     )]
     
-    public function login(Request $request)
+    public function login(\App\Http\Requests\LoginUsuarioRequest $request)
     {
-        $request->validate([
-            'cpf'   => 'required',
-            'senha' => 'required',
-        ]);
 
         $usuario = User::where('cpf', $request->cpf)->first();
 
@@ -231,12 +221,7 @@ class UsuarioController extends Controller
             ], 401);
         }
 
-        $credenciais = [
-            'cpf'      => $request->cpf,
-            'password' => $request->senha,
-        ];
-
-        if (!$token = auth('api')->attempt($credenciais)) {
+        if (!\Illuminate\Support\Facades\Hash::check($request->senha, $usuario->senha)) {
             return response()->json([
                 'message' => 'Credenciais inválidas'
             ], 401);
@@ -249,9 +234,6 @@ class UsuarioController extends Controller
             'jti_token' => \Illuminate\Support\Str::uuid()->toString(),
             'jti_token_created_at' => now(),
         ]);
-
-        // Invalidar o token temporário do attempt() (ele carrega o JTI antigo)
-        auth('api')->invalidate(true);
 
         // Gerar um token novo — login() chama getJWTCustomClaims() no $usuario atualizado,
         // garantindo que o JTI no token bata com o JTI no banco
@@ -315,13 +297,9 @@ class UsuarioController extends Controller
             new OA\Response(response: 422, description: "Erro de validação")
         ]
     )]
-    public function update(Request $request, $id)
+    public function update(\App\Http\Requests\UpdateUsuarioCargoRequest $request, $id)
     {
         $usuario = User::findOrFail($id);
-
-        $request->validate([
-            'cargo' => 'required|string|in:Usuario,Tecnico,Admin',
-        ]);
 
         // Atualiza pelo ID do cargo
         $cargoId = Cargo::where('nome', $request->cargo)->value('id');
@@ -375,20 +353,9 @@ class UsuarioController extends Controller
             new OA\Response(response: 422, description: "Erro de validação")
         ]
     )]
-    public function updatePerfil(Request $request, $id)
+    public function updatePerfil(\App\Http\Requests\UpdateUsuarioPerfilRequest $request, $id)
     {
-        if ($request->user()->id != $id) {
-            return response()->json(['message' => 'Você não tem permissão para editar este perfil.'], 403);
-        }
-        
         $usuario = User::findOrFail($id);
-
-        $request->validate([
-            'nome'       => 'required|string|max:80',
-            'email' => 'required|email|unique:usuarios,email,' . $id,
-            'nova_senha' => 'sometimes|nullable|string|min:4',
-            'senha_atual'=> 'sometimes|nullable|string',
-        ]);
 
         $usuario->nome  = $request->nome;
         $usuario->email = $request->email;

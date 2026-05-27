@@ -72,7 +72,7 @@ export default function Configuracoes() {
         senha_atual: senhaAtual || undefined,
         nova_senha: novaSenha || undefined,
       });
-      localStorage.setItem('usuarioNome', nome);
+      sessionStorage.setItem('usuarioNome', nome);
       setSucessoPerfil(true);
       setSenhaAtual('');
       setNovaSenha('');

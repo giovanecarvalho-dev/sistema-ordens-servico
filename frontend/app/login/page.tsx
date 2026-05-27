@@ -24,11 +24,11 @@ if (resposta.status === 200) {
     const user = resposta.data.user;
     const token = resposta.data.token;
 
-    localStorage.setItem('tecnicoLogado', cpf);
-    localStorage.setItem('usuarioId', user.id);
-    localStorage.setItem('usuarioCargo', user.cargo?.nome || user.cargo);
-    localStorage.setItem('usuarioNome', user.nome);
-    localStorage.setItem('token', token);
+    sessionStorage.setItem('tecnicoLogado', cpf);
+    sessionStorage.setItem('usuarioId', user.id);
+    sessionStorage.setItem('usuarioCargo', user.cargo?.nome || user.cargo);
+    sessionStorage.setItem('usuarioNome', user.nome);
+    sessionStorage.setItem('token', token);
 
     const temaSalvo = localStorage.getItem(`theme_${cpf}`) || 'light';
     localStorage.setItem('theme', temaSalvo);

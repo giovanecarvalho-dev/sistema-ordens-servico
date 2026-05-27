@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import api from "./services/api";
 import Paginacao from "./components/Paginacao";
 
@@ -129,9 +129,9 @@ export default function ListaChamados() {
   const categorias = listaCategorias.length ? listaCategorias : [
     { id: 1, nome: "Rede" }, { id: 2, nome: "Acesso" }, { id: 3, nome: "Infraestrutura" }
   ];
-  const statusList = listaStatus.length ? listaStatus : [
-    { id: 1, nome: "Novo" }, { id: 2, nome: "Em Andamento" }, { id: 3, nome: "Aguardando Peça" }, { id: 4, nome: "Pausado" }, { id: 5, nome: "Fechado" }, { id: 6, nome: "Concluído" }
-  ];
+  const statusList = (listaStatus.length ? listaStatus : [
+    { id: 1, nome: "Novo" }, { id: 2, nome: "Em Andamento" }, { id: 3, nome: "Aguardando Peça" }, { id: 4, nome: "Pausado" }, { id: 5, nome: "Fechado" }
+  ]).filter((s: any) => s.nome !== "Concluído");
   const urgenciasList = listaUrgencias.length ? listaUrgencias : [
     { id: 1, nome: "Baixa" }, { id: 2, nome: "Media" }, { id: 3, nome: "Alta" }, { id: 4, nome: "Muito Alta" }
   ];
@@ -153,7 +153,39 @@ export default function ListaChamados() {
   const [anexoPreview, setAnexoPreview] = useState<{url: string, osId: number} | null>(null);
   const [abaModal, setAbaModal] = useState<"comentarios" | "historico">("comentarios");
   const [novoComentario, setNovoComentario] = useState("");
+  const inputComentarioRef = useRef<HTMLInputElement>(null);
+
+
   const [enviandoComentario, setEnviandoComentario] = useState(false);
+  const [comentarioEditandoId, setComentarioEditandoId] = useState<number | null>(null);
+  const [comentarioEditandoConteudo, setComentarioEditandoConteudo] = useState("");
+  const [comentarioRespondendo, setComentarioRespondendo] = useState<any>(null);
+
+  useEffect(() => {
+    if (comentarioRespondendo) {
+      // Pequeno timeout para garantir que o render ocorreu antes de focar
+      setTimeout(() => {
+        inputComentarioRef.current?.focus();
+      }, 50);
+    }
+  }, [comentarioRespondendo]);
+
+  const salvarEdicaoComentario = async (id: number) => {
+    try {
+      await api.put(`/ordens/${chamadoSelecionado.id}/comentarios/${id}`, { conteudo: comentarioEditandoConteudo });
+      setComentarioEditandoId(null);
+      await recarregarChamado(chamadoSelecionado.id);
+    } catch (err) { alert("Erro ao editar comentário."); }
+  };
+
+  const deletarComentario = async (id: number, tipo: 'mim' | 'todos') => {
+    if (confirm(`Deseja excluir este comentário para ${tipo === 'todos' ? 'todos' : 'você'}?`)) {
+      try {
+        await api.delete(`/ordens/${chamadoSelecionado.id}/comentarios/${id}?tipo=${tipo}`);
+        await recarregarChamado(chamadoSelecionado.id);
+      } catch (err) { alert("Erro ao excluir comentário."); }
+    }
+  };
 
   const [cargo, setCargo] = useState("");
   const [meuUsuarioId, setMeuUsuarioId] = useState("");
@@ -163,8 +195,8 @@ export default function ListaChamados() {
     setCarregando(true);
     try {
       // Pega os dados locais direto na hora do request para garantir que não vai vazio
-      const currentCargo = localStorage.getItem("usuarioCargo") || "";
-      const currentUserId = localStorage.getItem("usuarioId") || "";
+      const currentCargo = sessionStorage.getItem("usuarioCargo") || "";
+      const currentUserId = sessionStorage.getItem("usuarioId") || "";
 
       // Monta os parâmetros que serão enviados na URL da API
       const params: any = {
@@ -231,9 +263,9 @@ export default function ListaChamados() {
   }, [filtros]);
 
   useEffect(() => {
-    // 1. Inicialização síncrona com base no localStorage para evitar atraso visual
-    const localCargo = localStorage.getItem("usuarioCargo") || "";
-    const localId = localStorage.getItem("usuarioId") || "";
+    // 1. Inicialização síncrona com base no sessionStorage para evitar atraso visual
+    const localCargo = sessionStorage.getItem("usuarioCargo") || "";
+    const localId = sessionStorage.getItem("usuarioId") || "";
     setCargo(localCargo);
     setMeuUsuarioId(localId);
 
@@ -287,8 +319,8 @@ export default function ListaChamados() {
           setCargo(perfilCargo);
           setMeuUsuarioId(perfilId);
           
-          localStorage.setItem("usuarioCargo", perfilCargo);
-          localStorage.setItem("usuarioId", perfilId);
+          sessionStorage.setItem("usuarioCargo", perfilCargo);
+          sessionStorage.setItem("usuarioId", perfilId);
         })
         .catch((err) => {
           console.error("Erro ao validar perfil", err);
@@ -367,9 +399,11 @@ export default function ListaChamados() {
     setEnviandoComentario(true);
     try {
       await api.post(`/ordens/${chamadoSelecionado.id}/comentarios`, {
-        conteudo: novoComentario
+        conteudo: novoComentario,
+        parent_id: comentarioRespondendo ? comentarioRespondendo.id : null
       });
       setNovoComentario("");
+      setComentarioRespondendo(null);
       await recarregarChamado(chamadoSelecionado.id);
     } catch (err) {
       alert("Erro ao enviar comentário.");
@@ -417,6 +451,133 @@ export default function ListaChamados() {
       alert("Erro ao atualizar a ordem de serviço.");
     }
   };
+
+  const renderLinks = (text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.split(urlRegex).map((part, i) => 
+      urlRegex.test(part) ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-300 hover:underline break-all font-semibold" onClick={(e) => e.stopPropagation()}>{part}</a> : part
+    );
+  };
+
+  const renderFormComentario = () => (
+    <div className="mt-auto border-t border-slate-150 dark:border-slate-800/80 pt-3 flex flex-col gap-2">
+      {comentarioRespondendo && (
+        <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded-xl flex justify-between items-start border-l-4 border-blue-500 shadow-sm relative">
+          <div className="pr-6">
+            <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 mb-0.5">Respondendo a {comentarioRespondendo.usuario_nome}</p>
+            <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 max-w-[250px] italic">{comentarioRespondendo.conteudo}</p>
+          </div>
+          <button type="button" onClick={() => setComentarioRespondendo(null)} className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+      )}
+      <form onSubmit={enviarComentario} className="flex gap-2">
+        <input
+          ref={inputComentarioRef}
+          type="text"
+          value={novoComentario}
+          onChange={(e) => setNovoComentario(e.target.value)}
+          placeholder="Digite sua mensagem..."
+          maxLength={1000}
+          className="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-850 dark:text-slate-150"
+          required
+        />
+        <button
+          type="submit"
+          disabled={enviandoComentario || !novoComentario.trim()}
+          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition-colors"
+        >
+          {enviandoComentario ? "Enviando..." : "Enviar"}
+        </button>
+      </form>
+    </div>
+  );
+
+  const renderComentarios = () => (
+    <div className="flex-1 space-y-3 overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] mb-2 pb-2">
+      {(!chamadoSelecionado.comentarios || chamadoSelecionado.comentarios.length === 0) ? (
+        <p className="text-xs text-slate-400 dark:text-slate-500 italic py-4">Nenhuma mensagem enviada.</p>
+      ) : (
+        chamadoSelecionado.comentarios.map((c: any) => {
+          const isMe = String(c.usuario_id) === String(meuUsuarioId);
+          const isEditing = comentarioEditandoId === c.id;
+          const editTimeExpired = new Date().getTime() - new Date(c.criado_em).getTime() > 5 * 60 * 1000;
+          const canEdit = isMe && (cargo === "Admin" || !editTimeExpired);
+
+          return (
+            <div key={c.id} className={`flex flex-col max-w-[85%] ${isMe ? "ml-auto items-end" : "mr-auto items-start"}`}>
+              <span className="text-[9px] font-bold text-slate-400 mb-0.5">
+                {c.usuario_nome} <span className="font-normal">({c.usuario_cargo})</span>
+              </span>
+              
+              {isEditing ? (
+                <div className="flex flex-col w-full gap-2 mt-1">
+                  <textarea
+                    value={comentarioEditandoConteudo}
+                    onChange={(e) => setComentarioEditandoConteudo(e.target.value)}
+                    className="w-full text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-blue-500 outline-none"
+                    rows={3}
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button onClick={() => setComentarioEditandoId(null)} className="text-[10px] px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg text-slate-700 dark:text-slate-200 font-bold transition-colors uppercase">Cancelar</button>
+                    <button onClick={() => salvarEdicaoComentario(c.id)} className="text-[10px] px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-bold transition-colors uppercase">Salvar</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className={`p-3 rounded-2xl text-xs leading-relaxed group relative ${
+                    isMe 
+                      ? "bg-blue-600 text-white rounded-tr-none" 
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-200/50 dark:border-slate-700/50"
+                  }`}>
+                    {c.parent && (
+                      <div className={`mb-2 p-2 rounded-lg text-[10px] opacity-90 border-l-2 bg-black/10 dark:bg-white/10 ${isMe ? "border-blue-200" : "border-slate-400"}`}>
+                        <p className="font-bold mb-0.5">{c.parent.usuario?.nome || "Usuário"}</p>
+                        <p className="line-clamp-2 max-w-[200px]">{c.parent.conteudo}</p>
+                      </div>
+                    )}
+                    {renderLinks(c.conteudo)}
+                    
+                    <div className={`hidden group-hover:flex absolute -top-3 ${isMe ? "right-0" : "left-0"} bg-white dark:bg-slate-800 shadow-lg rounded-lg border border-slate-200 dark:border-slate-700 p-1 gap-1 z-10 items-center`}>
+                      <button onClick={() => setComentarioRespondendo(c)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400 hover:text-green-500 transition-colors" title="Responder">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                      </button>
+                      {(isMe || cargo === "Admin") && (
+                        <>
+                          {canEdit && (
+                            <button onClick={() => { setComentarioEditandoId(c.id); setComentarioEditandoConteudo(c.conteudo); }} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400 hover:text-blue-500 transition-colors" title="Editar">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            </button>
+                          )}
+                          <button onClick={() => deletarComentario(c.id, 'mim')} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400 hover:text-orange-500 transition-colors" title="Excluir apenas para mim">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
+                          </button>
+                          <button onClick={() => deletarComentario(c.id, 'todos')} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400 hover:text-red-500 transition-colors" title="Excluir para todos">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-[8px] text-slate-400 font-medium">
+                      {new Date(c.criado_em).toLocaleDateString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    {c.editado && (
+                      <span className="text-[8px] text-slate-400 font-medium italic">
+                        • editado
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
 
   const exportarCSV = async () => {
     try {
@@ -795,7 +956,7 @@ export default function ListaChamados() {
       {/* MODAL DE EDIÇÃO E DETALHES */}
       {chamadoSelecionado && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-y-auto max-h-[90vh]">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-2xl p-5 md:p-6 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-y-auto max-h-[95vh] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <h3 className="text-xl font-black mb-2 text-slate-800 dark:text-white">
               {cargo === "Usuario" ? "Acompanhamento do Chamado" : `Detalhes e Edição do Chamado #${chamadoSelecionado.id}`}
             </h3>
@@ -803,7 +964,7 @@ export default function ListaChamados() {
               {chamadoSelecionado.titulo}
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {cargo === "Usuario" ? (
                 /* Coluna da Esquerda: Informações em modo de leitura para Cliente */
                 <div className="space-y-5">
@@ -973,57 +1134,15 @@ export default function ListaChamados() {
               <div className="border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 md:pl-8 pt-6 md:pt-0">
                 {cargo === "Usuario" ? (
                   /* APENAS CHAT PARA O CLIENTE */
-                  <div className="flex flex-col h-[400px]">
+                  <div className="flex flex-col h-[360px]">
                     <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
                       Mensagens e Discussão
                     </h4>
                     {/* Lista de comentários */}
-                    <div className="flex-1 space-y-3 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800 mb-4">
-                      {(!chamadoSelecionado.comentarios || chamadoSelecionado.comentarios.length === 0) ? (
-                        <p className="text-xs text-slate-400 dark:text-slate-500 italic py-4">Nenhuma mensagem enviada.</p>
-                      ) : (
-                        chamadoSelecionado.comentarios.map((c: any) => {
-                          const isMe = String(c.usuario_id) === String(meuUsuarioId);
-                          return (
-                            <div key={c.id} className={`flex flex-col max-w-[85%] ${isMe ? "ml-auto items-end" : "mr-auto items-start"}`}>
-                              <span className="text-[9px] font-bold text-slate-400 mb-0.5">
-                                {c.usuario_nome} <span className="font-normal">({c.usuario_cargo})</span>
-                              </span>
-                              <div className={`p-3 rounded-2xl text-xs leading-relaxed ${
-                                isMe 
-                                  ? "bg-blue-600 text-white rounded-tr-none" 
-                                  : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-200/50 dark:border-slate-700/50"
-                              }`}>
-                                {c.conteudo}
-                              </div>
-                              <span className="text-[8px] text-slate-400 mt-0.5 font-medium">
-                                {new Date(c.criado_em).toLocaleDateString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                              </span>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
+                    {renderComentarios()}
 
                     {/* Formulário de envio de comentário */}
-                    <form onSubmit={enviarComentario} className="mt-auto flex gap-2 border-t border-slate-150 dark:border-slate-800/80 pt-3">
-                      <input
-                        type="text"
-                        value={novoComentario}
-                        onChange={(e) => setNovoComentario(e.target.value)}
-                        placeholder="Digite sua mensagem..."
-                        maxLength={500}
-                        className="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-850 dark:text-slate-150"
-                        required
-                      />
-                      <button
-                        type="submit"
-                        disabled={enviandoComentario || !novoComentario.trim()}
-                        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition-colors"
-                      >
-                        {enviandoComentario ? "Enviando..." : "Enviar"}
-                      </button>
-                    </form>
+                    {renderFormComentario()}
                   </div>
                 ) : (
                   /* ESTRUTURA ORIGINAL COM SLA E ABAS SWITCHER PARA ADMIN/TECNICO */
@@ -1063,59 +1182,17 @@ export default function ListaChamados() {
                     </div>
 
                     {abaModal === "comentarios" && (
-                      <div className="flex flex-col h-[400px]">
+                      <div className="flex flex-col h-[360px]">
                         {/* Lista de comentários */}
-                        <div className="flex-1 space-y-3 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800 mb-4">
-                          {(!chamadoSelecionado.comentarios || chamadoSelecionado.comentarios.length === 0) ? (
-                            <p className="text-xs text-slate-400 dark:text-slate-500 italic py-4">Nenhuma mensagem enviada.</p>
-                          ) : (
-                            chamadoSelecionado.comentarios.map((c: any) => {
-                              const isMe = String(c.usuario_id) === String(meuUsuarioId);
-                              return (
-                                <div key={c.id} className={`flex flex-col max-w-[85%] ${isMe ? "ml-auto items-end" : "mr-auto items-start"}`}>
-                                  <span className="text-[9px] font-bold text-slate-400 mb-0.5">
-                                    {c.usuario_nome} <span className="font-normal">({c.usuario_cargo})</span>
-                                  </span>
-                                  <div className={`p-3 rounded-2xl text-xs leading-relaxed ${
-                                    isMe 
-                                      ? "bg-blue-600 text-white rounded-tr-none" 
-                                      : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-200/50 dark:border-slate-700/50"
-                                  }`}>
-                                    {c.conteudo}
-                                  </div>
-                                  <span className="text-[8px] text-slate-400 mt-0.5 font-medium">
-                                    {new Date(c.criado_em).toLocaleDateString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                                  </span>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
+                        {renderComentarios()}
 
                         {/* Formulário de envio de comentário */}
-                        <form onSubmit={enviarComentario} className="mt-auto flex gap-2 border-t border-slate-150 dark:border-slate-800/80 pt-3">
-                          <input
-                            type="text"
-                            value={novoComentario}
-                            onChange={(e) => setNovoComentario(e.target.value)}
-                            placeholder="Digite sua mensagem..."
-                            maxLength={500}
-                            className="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-850 dark:text-slate-150"
-                            required
-                          />
-                          <button
-                            type="submit"
-                            disabled={enviandoComentario || !novoComentario.trim()}
-                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-xl text-xs font-black uppercase transition-colors"
-                          >
-                            {enviandoComentario ? "Enviando..." : "Enviar"}
-                          </button>
-                        </form>
+                        {renderFormComentario()}
                       </div>
                     )}
 
                     {abaModal === "historico" && (
-                      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
+                      <div className="space-y-4 max-h-[360px] overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                         {(!chamadoSelecionado.historicos || chamadoSelecionado.historicos.length === 0) ? (
                           <p className="text-xs text-slate-400 dark:text-slate-500 italic">Nenhum registro de histórico.</p>
                         ) : (

@@ -41,21 +41,21 @@ export default function Estatisticas() {
     'Acesso': 'bg-green-500',
   };
 
-  const card = "bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col";
+  const card = "bg-white dark:bg-slate-900 p-3 md:p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col";
 
   // Previne divisão por zero
   const totalGeralComLixo = geral.total + geral.excluidos;
 
   return (
-    <div className="p-4 md:p-6 bg-slate-50 dark:bg-slate-950 h-full flex flex-col">
-      <h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter mb-4 md:mb-6">Estatísticas do Sistema</h2>
+    <div className="p-3 md:p-4 bg-slate-50 dark:bg-slate-950 h-full flex flex-col overflow-hidden">
+      <h2 className="text-lg md:text-xl font-black text-slate-800 dark:text-white uppercase tracking-tighter mb-3">Estatísticas do Sistema</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 flex-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-2">
 
         {/* CARD 1: STATUS GERAL */}
         <div className={card}>
           <h3 className="text-[10px] md:text-xs font-bold text-slate-400 uppercase mb-3 tracking-widest">Status dos Chamados</h3>
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div>
               <div className="flex justify-between text-[10px] md:text-xs font-bold mb-1">
                 <span className="text-slate-600 dark:text-slate-300">RESOLVIDOS</span>
@@ -99,7 +99,7 @@ export default function Estatisticas() {
         {/* CARD 2: TOP TÉCNICOS */}
         <div className={card}>
           <h3 className="text-[10px] md:text-xs font-bold text-slate-400 uppercase mb-3 tracking-widest">Top Técnicos (Performance)</h3>
-          <div className="space-y-3 overflow-y-auto max-h-36 pr-2">
+          <div className="space-y-2 overflow-y-auto max-h-28 pr-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {top_tecnicos.map((tech: any, i: number) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="bg-slate-800 dark:bg-slate-700 text-white text-[9px] font-bold p-1.5 rounded w-12 text-center">
@@ -118,7 +118,7 @@ export default function Estatisticas() {
         </div>
 
         {/* CARD 3: TOTAL */}
-        <div className="bg-blue-600 p-4 md:p-6 rounded-2xl shadow-lg shadow-blue-500/20 flex flex-col justify-center items-center text-white">
+        <div className="bg-blue-600 p-3 md:p-4 rounded-2xl shadow-lg shadow-blue-500/20 flex flex-col justify-center items-center text-white">
           <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] mb-1 opacity-80 text-center">Total de Incidentes (Ativos)</span>
           <span className="text-4xl md:text-6xl font-black">{geral.total}</span>
         </div>
@@ -139,7 +139,7 @@ export default function Estatisticas() {
         <div className={`${card} md:col-span-2`}>
           <h3 className="text-[10px] md:text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest">Chamados por Categoria</h3>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-center flex-1">
             {/* Barras de progresso à esquerda */}
             <div className="space-y-4">
               {categorias.map((cat: any) => (
@@ -165,7 +165,7 @@ export default function Estatisticas() {
             </div>
 
             {/* Gráfico do Recharts à direita */}
-            <div className="h-56 w-full">
+            <div className="h-40 md:h-48 w-full mt-2 lg:mt-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dataGrafico} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />

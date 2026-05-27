@@ -11,6 +11,83 @@
         }
     ],
     "paths": {
+        "/api/configuracoes": {
+            "get": {
+                "tags": [
+                    "Configuracoes"
+                ],
+                "summary": "Retorna as configurações do sistema",
+                "operationId": "ced427248dd5762dc267b139c6aa4e69",
+                "responses": {
+                    "200": {
+                        "description": "Configurações retornadas"
+                    },
+                    "403": {
+                        "description": "Acesso negado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Configuracoes"
+                ],
+                "summary": "Atualiza as configurações do sistema",
+                "operationId": "f453d0388275c9de6006d0cecf8d1d0d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "sla_muito_alta": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "sla_alta": {
+                                        "type": "integer",
+                                        "example": 4
+                                    },
+                                    "sla_media": {
+                                        "type": "integer",
+                                        "example": 8
+                                    },
+                                    "sla_baixa": {
+                                        "type": "integer",
+                                        "example": 24
+                                    },
+                                    "nome_sistema": {
+                                        "type": "string",
+                                        "example": "Central de Suporte"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Configurações salvas"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    },
+                    "403": {
+                        "description": "Acesso negado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/dashboard/estatisticas": {
             "get": {
                 "tags": [
@@ -25,6 +102,89 @@
                     },
                     "403": {
                         "description": "Acesso negado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notificacoes": {
+            "get": {
+                "tags": [
+                    "Notificacoes"
+                ],
+                "summary": "Lista Notificações",
+                "description": "Retorna todas as notificações do usuário logado, ordenadas das mais recentes para as mais antigas.",
+                "operationId": "a556d23d6c230e3bb85a27cc91085a78",
+                "responses": {
+                    "200": {
+                        "description": "Lista de notificações retornada com sucesso"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notificacoes/{id}/ler": {
+            "put": {
+                "tags": [
+                    "Notificacoes"
+                ],
+                "summary": "Marcar Notificação como Lida",
+                "description": "Marca uma notificação específica do usuário logado como lida.",
+                "operationId": "409edd847fc521f565db8b502c0d3cc6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID da notificação",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notificação marcada como lida"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "404": {
+                        "description": "Notificação não encontrada ou não pertence ao usuário"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notificacoes/ler-todas": {
+            "put": {
+                "tags": [
+                    "Notificacoes"
+                ],
+                "summary": "Marcar Todas as Notificações como Lidas",
+                "description": "Marca todas as notificações não lidas do usuário logado como lidas.",
+                "operationId": "0ea7010324f116e669e8ed94c6ba46be",
+                "responses": {
+                    "200": {
+                        "description": "Todas as notificações marcadas como lidas"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
                     }
                 },
                 "security": [
@@ -279,6 +439,217 @@
                     },
                     "404": {
                         "description": "Ordem de serviço ou anexo não encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/ordens/{id}/comentarios": {
+            "post": {
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Adicionar Comentário",
+                "description": "Adiciona um novo comentário a uma ordem de serviço. Apenas o criador, técnico responsável ou Admin podem comentar.",
+                "operationId": "d9726138f4f972f7c9db3e1a7e04f4f0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID numérico ou Código de Rastreio (UUID) da OS",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "conteudo"
+                                ],
+                                "properties": {
+                                    "conteudo": {
+                                        "description": "Conteúdo do comentário (máx 1000 chars)",
+                                        "type": "string"
+                                    },
+                                    "parent_id": {
+                                        "description": "ID do comentário pai (para respostas)",
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Comentário adicionado com sucesso"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "403": {
+                        "description": "Acesso negado"
+                    },
+                    "404": {
+                        "description": "Ordem de serviço não encontrada"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/ordens/{id}/comentarios/{comentarioId}": {
+            "put": {
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Editar Comentário",
+                "description": "Edita um comentário existente. Usuários comuns só podem editar seus próprios comentários dentro de 5 minutos. Admin não tem limite de tempo.",
+                "operationId": "b5deeaa577e3938799ac864b63e5ccf0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID numérico ou Código de Rastreio (UUID) da OS",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "comentarioId",
+                        "in": "path",
+                        "description": "ID do comentário",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "conteudo"
+                                ],
+                                "properties": {
+                                    "conteudo": {
+                                        "description": "Novo conteúdo (máx 1000 chars)",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Comentário editado com sucesso"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "403": {
+                        "description": "Acesso negado / Tempo limite expirado"
+                    },
+                    "404": {
+                        "description": "Comentário não encontrado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Ordens de Serviço"
+                ],
+                "summary": "Excluir Comentário",
+                "description": "Exclui um comentário. Pode ser excluído apenas para o usuário atual ou para todos (deleção lógica). Apenas o autor ou Admin podem excluir.",
+                "operationId": "161cf2774485ba120987c2de648418c4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID numérico ou Código de Rastreio (UUID) da OS",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "comentarioId",
+                        "in": "path",
+                        "description": "ID do comentário",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "tipo"
+                                ],
+                                "properties": {
+                                    "tipo": {
+                                        "description": "Tipo de exclusão: 'mim' ou 'todos'",
+                                        "type": "string",
+                                        "enum": [
+                                            "mim",
+                                            "todos"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Comentário excluído com sucesso"
+                    },
+                    "401": {
+                        "description": "Não autenticado"
+                    },
+                    "403": {
+                        "description": "Acesso negado"
+                    },
+                    "404": {
+                        "description": "Comentário não encontrado"
+                    },
+                    "422": {
+                        "description": "Erro de validação"
                     }
                 },
                 "security": [
@@ -691,6 +1062,14 @@
     },
     "tags": [
         {
+            "name": "Configuracoes",
+            "description": "Configurações do sistema (SLA, nome, etc.)"
+        },
+        {
+            "name": "Notificacoes",
+            "description": "Gerenciamento das notificações de sistema"
+        },
+        {
             "name": "Usuarios",
             "description": "Endpoints para gerenciamento de usuários"
         },
@@ -701,6 +1080,10 @@
         {
             "name": "Ordens de Servico",
             "description": "Ordens de Servico"
+        },
+        {
+            "name": "Ordens de Serviço",
+            "description": "Ordens de Serviço"
         }
     ]
 }

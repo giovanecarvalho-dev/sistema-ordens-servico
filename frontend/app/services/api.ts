@@ -9,7 +9,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = typeof window !== 'undefined' ? sessionStorage.getItem('token') : null;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -32,9 +32,9 @@ api.interceptors.response.use(
       }
       
       //Limpa tudo que é velho no navegador
-      localStorage.removeItem('token');
-      localStorage.removeItem('usuarioId');
-      localStorage.removeItem('usuarioCargo');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('usuarioId');
+      sessionStorage.removeItem('usuarioCargo');
       
       alert("Sua sessão expirou. Por segurança, por favor, faça login novamente para continuar.");
 

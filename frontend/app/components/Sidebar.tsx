@@ -25,9 +25,16 @@ export default function Sidebar() {
       .catch(err => console.error("Erro ao carregar notificações", err));
   };
 
-  // 1. Inicialização (Roda uma única vez ao montar)
+  const [initialized, setInitialized] = useState(false);
+
+  // 1. Inicialização (Roda quando sai da tela de login)
   useEffect(() => {
-    if (pathname === '/login') return;
+    if (pathname === '/login') {
+      setInitialized(false);
+      return;
+    }
+
+    if (initialized) return;
 
     // UX rápida / Preferências locais síncronas
     const savedTheme = localStorage.getItem('theme') || 'light';
@@ -37,8 +44,8 @@ export default function Sidebar() {
     document.documentElement.classList.toggle('dark', savedTheme === 'dark');
 
     // Inicializa valores locais para resposta visual rápida
-    setCargo(localStorage.getItem('usuarioCargo') || '');
-    setNome(localStorage.getItem('usuarioNome') || '');
+    setCargo(sessionStorage.getItem('usuarioCargo') || '');
+    setNome(sessionStorage.getItem('usuarioNome') || '');
 
     // Busca dados reais do perfil para garantir a proteção
     api.get('/perfil')
@@ -51,20 +58,23 @@ export default function Sidebar() {
         setNome(nomeReal);
 
         // Sincroniza localStorage (UX rápida)
-        localStorage.setItem('usuarioCargo', cargoReal);
-        localStorage.setItem('usuarioNome', nomeReal);
+        sessionStorage.setItem('usuarioCargo', cargoReal);
+        sessionStorage.setItem('usuarioNome', nomeReal);
       })
       .catch(err => {
         // Se falhar (não autenticado ou sessão expirada) e não estamos no login, redireciona
-        localStorage.clear();
+        sessionStorage.clear();
         router.push('/login');
       });
 
     // Carrega notificações e inicia polling
     fetchNotificacoes();
     const interval = setInterval(fetchNotificacoes, 30000);
+    
+    setInitialized(true);
+
     return () => clearInterval(interval);
-  }, []);
+  }, [pathname, initialized]);
 
   // 2. Proteção de rotas instantânea por pathname (Zero chamadas de rede no clique)
   useEffect(() => {
@@ -74,7 +84,7 @@ export default function Sidebar() {
     setShowNotificacoes(false);
 
     // Valida acessos baseado no cargo atual carregado localmente
-    const currentCargo = cargo || localStorage.getItem('usuarioCargo') || '';
+    const currentCargo = cargo || sessionStorage.getItem('usuarioCargo') || '';
     if (currentCargo) {
       if (currentCargo === 'Usuario') {
         const rotasPermitidasUsuario = ['/', '/novo', '/configuracoes'];
@@ -126,7 +136,7 @@ export default function Sidebar() {
     } catch (e) {
         console.error('Erro ao fazer logout:', e);
     }
-    localStorage.clear();
+    sessionStorage.clear();
     router.push('/login');
   };
 

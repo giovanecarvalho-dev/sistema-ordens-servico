@@ -55,16 +55,8 @@ class ConfiguracaoController extends Controller
             new OA\Response(response: 403, description: "Acesso negado"),
         ]
     )]
-    public function update(Request $request)
+    public function update(\App\Http\Requests\UpdateConfiguracaoRequest $request)
     {
-        $request->validate([
-            'sla_muito_alta' => 'sometimes|integer|min:1',
-            'sla_alta'       => 'sometimes|integer|min:1',
-            'sla_media'      => 'sometimes|integer|min:1',
-            'sla_baixa'      => 'sometimes|integer|min:1',
-            'nome_sistema'   => 'sometimes|string|max:80',
-        ]);
-
         $mapa = [
             'sla_muito_alta' => 'sla_muito_alta',
             'sla_alta'       => 'sla_alta',

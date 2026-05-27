@@ -255,7 +255,8 @@ class OrdemServicoController extends Controller
             'status', 'categoria',
             'urgencia', 'prioridade',
             'historicos.usuario',
-            'comentarios.usuario'
+            'comentarios.usuario',
+            'comentarios.parent.usuario'
         ]);
 
         // Verifica se o que veio na URL é um UUID válido
@@ -274,6 +275,14 @@ class OrdemServicoController extends Controller
         }
 
         \Illuminate\Support\Facades\Gate::authorize('view', $ordem);
+
+        $user = request()->user();
+        if ($ordem->relationLoaded('comentarios')) {
+            $ordem->setRelation('comentarios', $ordem->comentarios->filter(function($c) use ($user) {
+                $excluidoPara = $c->excluido_para ?? [];
+                return !in_array($user->id, $excluidoPara);
+            })->values());
+        }
 
         return response()->json($ordem, 200);
     }
@@ -491,7 +500,39 @@ class OrdemServicoController extends Controller
         return response()->json(\App\Models\Prioridade::orderBy('id', 'asc')->get());
     }
 
-    public function addComentario(\Illuminate\Http\Request $request, $id)
+    // Ignorado, não adicionei swagger pros helpers (categorias, status, urgencias, prioridades) pois são simples. Vou focar nas actions de comentarios.
+    
+    #[OA\Post(
+        path: "/api/ordens/{id}/comentarios",
+        summary: "Adicionar Comentário",
+        description: "Adiciona um novo comentário a uma ordem de serviço. Apenas o criador, técnico responsável ou Admin podem comentar.",
+        tags: ["Ordens de Serviço"],
+        security: [["bearerAuth" => []]],
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, description: "ID numérico ou Código de Rastreio (UUID) da OS", schema: new OA\Schema(type: "string"))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: "application/json",
+                schema: new OA\Schema(
+                    required: ["conteudo"],
+                    properties: [
+                        new OA\Property(property: "conteudo", type: "string", description: "Conteúdo do comentário (máx 1000 chars)"),
+                        new OA\Property(property: "parent_id", type: "integer", nullable: true, description: "ID do comentário pai (para respostas)")
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: "Comentário adicionado com sucesso"),
+            new OA\Response(response: 401, description: "Não autenticado"),
+            new OA\Response(response: 403, description: "Acesso negado"),
+            new OA\Response(response: 404, description: "Ordem de serviço não encontrada"),
+            new OA\Response(response: 422, description: "Erro de validação")
+        ]
+    )]
+    public function addComentario(\App\Http\Requests\StoreComentarioRequest $request, $id)
     {
         if (\Illuminate\Support\Str::isUuid($id)) {
             $ordem = OrdemServico::where('codigo_rastreio', $id)->first();
@@ -504,30 +545,141 @@ class OrdemServicoController extends Controller
         }
 
         $user = $request->user();
-        $userCargo = is_string($user->cargo) ? $user->cargo : ($user->cargo?->nome ?? '');
 
-        // Autorização: Apenas criador da OS, técnico atribuído ou Admin podem comentar
-        if ($userCargo !== 'Admin' && $ordem->usuario_id !== $user->id && $ordem->tecnico_id !== $user->id) {
-            return response()->json(['message' => 'Você não tem permissão para comentar nesta ordem de serviço.'], 403);
-        }
-
-        $request->validate([
-            'conteudo' => 'required|string|max:1000'
-        ]);
+        $conteudoSeguro = strip_tags($request->conteudo);
 
         $comentario = $ordem->comentarios()->create([
             'usuario_id' => $user->id,
-            'conteudo' => $request->conteudo
+            'conteudo' => $conteudoSeguro,
+            'parent_id' => $request->parent_id
         ]);
 
         // Registrar no histórico da OS
         $ordem->historicos()->create([
             'usuario_id' => $user->id,
             'acao'       => 'Comentado',
-            'descricao'  => 'Comentário adicionado por ' . $user->nome . ': ' . \Illuminate\Support\Str::limit($request->conteudo, 60),
+            'descricao'  => 'Comentário adicionado por ' . $user->nome . ': ' . \Illuminate\Support\Str::limit($conteudoSeguro, 60),
             'criado_em'  => now()
         ]);
 
-        return response()->json($comentario->load('usuario'), 201);
+        // Notificar o dono da OS se não foi ele quem comentou
+        if ($ordem->usuario_id !== $user->id) {
+            \App\Models\Notificacao::create([
+                'usuario_id' => $ordem->usuario_id,
+                'ordem_servico_id' => $ordem->id,
+                'titulo' => 'Nova mensagem no chamado',
+                'mensagem' => "{$user->nome} respondeu no seu chamado #{$ordem->id}: '{$ordem->titulo}'.",
+                'lida' => false,
+                'criado_em' => now()
+            ]);
+        }
+
+        // Notificar o técnico caso exista, e ele não seja o autor do comentário
+        if (!empty($ordem->tecnico_id) && $ordem->tecnico_id !== $user->id) {
+            \App\Models\Notificacao::create([
+                'usuario_id' => $ordem->tecnico_id,
+                'ordem_servico_id' => $ordem->id,
+                'titulo' => 'Nova mensagem no chamado',
+                'mensagem' => "{$user->nome} comentou no chamado #{$ordem->id} que você está acompanhando.",
+                'lida' => false,
+                'criado_em' => now()
+            ]);
+        }
+
+        return response()->json($comentario->load(['usuario', 'parent.usuario']), 201);
+    }
+
+    #[OA\Put(
+        path: "/api/ordens/{id}/comentarios/{comentarioId}",
+        summary: "Editar Comentário",
+        description: "Edita um comentário existente. Usuários comuns só podem editar seus próprios comentários dentro de 5 minutos. Admin não tem limite de tempo.",
+        tags: ["Ordens de Serviço"],
+        security: [["bearerAuth" => []]],
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, description: "ID numérico ou Código de Rastreio (UUID) da OS", schema: new OA\Schema(type: "string")),
+            new OA\Parameter(name: "comentarioId", in: "path", required: true, description: "ID do comentário", schema: new OA\Schema(type: "integer"))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: "application/json",
+                schema: new OA\Schema(
+                    required: ["conteudo"],
+                    properties: [
+                        new OA\Property(property: "conteudo", type: "string", description: "Novo conteúdo (máx 1000 chars)")
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: "Comentário editado com sucesso"),
+            new OA\Response(response: 401, description: "Não autenticado"),
+            new OA\Response(response: 403, description: "Acesso negado / Tempo limite expirado"),
+            new OA\Response(response: 404, description: "Comentário não encontrado"),
+            new OA\Response(response: 422, description: "Erro de validação")
+        ]
+    )]
+    public function updateComentario(\App\Http\Requests\UpdateComentarioRequest $request, $id, $comentarioId)
+    {
+        $comentario = \App\Models\OrdemServicoComentario::findOrFail($comentarioId);
+
+        $conteudoSeguro = strip_tags($request->conteudo);
+
+        $comentario->update([
+            'conteudo' => $conteudoSeguro,
+            'editado' => true
+        ]);
+
+        return response()->json($comentario->load('usuario'), 200);
+    }
+
+    #[OA\Delete(
+        path: "/api/ordens/{id}/comentarios/{comentarioId}",
+        summary: "Excluir Comentário",
+        description: "Exclui um comentário. Pode ser excluído apenas para o usuário atual ou para todos (deleção lógica). Apenas o autor ou Admin podem excluir.",
+        tags: ["Ordens de Serviço"],
+        security: [["bearerAuth" => []]],
+        parameters: [
+            new OA\Parameter(name: "id", in: "path", required: true, description: "ID numérico ou Código de Rastreio (UUID) da OS", schema: new OA\Schema(type: "string")),
+            new OA\Parameter(name: "comentarioId", in: "path", required: true, description: "ID do comentário", schema: new OA\Schema(type: "integer"))
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: "application/json",
+                schema: new OA\Schema(
+                    required: ["tipo"],
+                    properties: [
+                        new OA\Property(property: "tipo", type: "string", enum: ["mim", "todos"], description: "Tipo de exclusão: 'mim' ou 'todos'")
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: "Comentário excluído com sucesso"),
+            new OA\Response(response: 401, description: "Não autenticado"),
+            new OA\Response(response: 403, description: "Acesso negado"),
+            new OA\Response(response: 404, description: "Comentário não encontrado"),
+            new OA\Response(response: 422, description: "Erro de validação")
+        ]
+    )]
+    public function deleteComentario(\App\Http\Requests\DeleteComentarioRequest $request, $id, $comentarioId)
+    {
+        $comentario = \App\Models\OrdemServicoComentario::findOrFail($comentarioId);
+        
+        $user = $request->user();
+        $tipoExclusao = $request->query('tipo', 'mim'); // 'mim' ou 'todos'
+
+        if ($tipoExclusao === 'todos') {
+            $comentario->delete();
+            return response()->json(['message' => 'Comentário excluído para todos.'], 200);
+        } else {
+            $excluidoPara = $comentario->excluido_para ?? [];
+            if (!in_array($user->id, $excluidoPara)) {
+                $excluidoPara[] = $user->id;
+                $comentario->update(['excluido_para' => $excluidoPara]);
+            }
+            return response()->json(['message' => 'Comentário excluído para você.'], 200);
+        }
     }
 }

@@ -15,7 +15,6 @@ class StatusSeeder extends Seeder
         \App\Models\Status::firstOrCreate(['nome' => 'Novo']);
         \App\Models\Status::firstOrCreate(['nome' => 'Em Andamento']);
         \App\Models\Status::firstOrCreate(['nome' => 'Pausado']);
-        \App\Models\Status::firstOrCreate(['nome' => 'Concluído']);
         \App\Models\Status::firstOrCreate(['nome' => 'Cancelado']);
     }
 }

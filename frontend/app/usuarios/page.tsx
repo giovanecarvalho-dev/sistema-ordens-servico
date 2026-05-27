@@ -11,7 +11,7 @@ export default function UsuariosPage() {
     const [filtroId, setFiltroId] = useState('');
     const [itensPorPagina, setItensPorPagina] = useState(15);
 
-    const meuId = typeof window !== 'undefined' ? localStorage.getItem('usuarioId') : null;
+    const meuId = typeof window !== 'undefined' ? sessionStorage.getItem('usuarioId') : null;
 
     // Busca os dados da API já filtrados, paginados e calculados pelo back-end!
     const buscarUsuarios = () => {

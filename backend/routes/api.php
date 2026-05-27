@@ -44,7 +44,14 @@ Route::middleware(['auth:api', 'validate-jti'])->group(function () {
     Route::put('/usuarios/{id}/perfil', [UsuarioController::class, 'updatePerfil']);
     Route::post('/ordens', [OrdemServicoController::class, 'store']); 
     Route::get('/ordens/{id}/anexo', [OrdemServicoController::class, 'downloadAnexo']);
-    Route::post('/ordens/{id}/comentarios', [OrdemServicoController::class, 'addComentario']);
+    
+    // Anti-flood (Rate Limit) nos comentários (15 reqs por minuto)
+    Route::middleware('throttle:15,1')->group(function () {
+        Route::post('/ordens/{id}/comentarios', [OrdemServicoController::class, 'addComentario']);
+        Route::put('/ordens/{id}/comentarios/{comentarioId}', [OrdemServicoController::class, 'updateComentario']);
+        Route::delete('/ordens/{id}/comentarios/{comentarioId}', [OrdemServicoController::class, 'deleteComentario']);
+    });
+    
     Route::get('/ordens', [OrdemServicoController::class, 'index']); 
     Route::get('/ordens/{id}', [OrdemServicoController::class, 'show']);
     
