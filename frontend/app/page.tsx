@@ -157,16 +157,44 @@ export default function ListaChamados() {
   const [novoComentario, setNovoComentario] = useState("");
   const inputComentarioRef = useRef<HTMLInputElement>(null);
 
+  const [navMode, setNavMode] = useState(false);
+  const [navIndex, setNavIndex] = useState(0);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+
       if (event.key === 'Escape') {
         setChamadoSelecionado(null);
         setAnexoPreview(null);
+        setNavMode(false);
+      }
+
+      if (!navMode && (event.key === 'm' || event.key === 'M') && !chamadoSelecionado && !anexoPreview) {
+        setNavMode(true);
+        setNavIndex(0);
+        event.preventDefault();
+      }
+
+      if (navMode && !chamadoSelecionado && !anexoPreview) {
+        if (event.key === 'ArrowDown' || event.key === 'j') {
+          setNavIndex((prev) => Math.min(prev + 1, ordens.length - 1));
+          event.preventDefault();
+        } else if (event.key === 'ArrowUp' || event.key === 'k') {
+          setNavIndex((prev) => Math.max(prev - 1, 0));
+          event.preventDefault();
+        } else if (event.key === 'Enter') {
+          if (ordens[navIndex]) {
+            abrirModalEdicao(ordens[navIndex]);
+          }
+          event.preventDefault();
+        }
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [navMode, navIndex, ordens, chamadoSelecionado, anexoPreview]);
   const [enviandoComentario, setEnviandoComentario] = useState(false);
   const [comentarioEditandoId, setComentarioEditandoId] = useState<number | null>(null);
   const [comentarioEditandoConteudo, setComentarioEditandoConteudo] = useState("");
@@ -784,10 +812,10 @@ export default function ListaChamados() {
                   </td>
                 </tr>
               )}
-              {ordensExibicao.map((os: any) => (
+              {ordensExibicao.map((os: any, index: number) => (
                 <tr
                   key={os.id}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+                  className={`transition-colors ${navMode && navIndex === index ? 'bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-500 ring-inset cursor-pointer' : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'}`}
                 >
                   <td className="px-4 py-3 font-bold text-slate-800 dark:text-slate-200 overflow-hidden">
                     <div className="flex items-center gap-2">
@@ -857,12 +885,12 @@ export default function ListaChamados() {
                   </td>
                 </tr>
               )}
-              {ordensExibicao.map((os: any) => {
+              {ordensExibicao.map((os: any, index: number) => {
                 const slaStatus = statusSla(os);
                 return (
                   <tr
                     key={os.id}
-                    className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${slaStatus === "vencido" ? "border-l-4 border-red-500" : slaStatus === "alerta" ? "border-l-4 border-yellow-400" : ""}`}
+                    className={`transition-colors ${navMode && navIndex === index ? 'bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-500 ring-inset cursor-pointer' : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'} ${slaStatus === "vencido" ? "border-l-4 border-red-500" : slaStatus === "alerta" ? "border-l-4 border-yellow-400" : ""}`}
                   >
                     <td className="px-2 py-3 font-mono text-blue-600 dark:text-blue-400 truncate overflow-hidden">#{os.id}</td>
                     <td className="px-2 py-3 font-bold text-slate-800 dark:text-slate-200 overflow-hidden">
@@ -1301,6 +1329,16 @@ export default function ListaChamados() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* BANNER DE NAVEGAÇÃO POR TECLADO */}
+      {navMode && !chamadoSelecionado && !anexoPreview && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 dark:bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl z-40 flex items-center gap-4 animate-in slide-in-from-bottom-5 fade-in border border-slate-700/50">
+          <span className="flex items-center justify-center w-6 h-6 bg-slate-700 rounded text-xs font-black">M</span>
+          <span className="text-xs font-bold tracking-widest uppercase text-blue-400">Modo Navegação</span>
+          <div className="h-4 w-px bg-slate-700 mx-1"></div>
+          <span className="text-[10px] text-slate-300 uppercase tracking-widest font-bold">Use <kbd className="font-mono text-white ml-1">↑</kbd> <kbd className="font-mono text-white mr-1">↓</kbd> / <kbd className="font-mono text-white ml-1">J</kbd> <kbd className="font-mono text-white mr-1">K</kbd> e <kbd className="font-mono text-white mx-1">ENTER</kbd> para abrir. <kbd className="font-mono text-white ml-1">ESC</kbd> para sair.</span>
         </div>
       )}
     </>
