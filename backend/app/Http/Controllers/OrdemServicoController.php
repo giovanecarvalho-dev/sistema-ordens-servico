@@ -143,10 +143,10 @@ class OrdemServicoController extends Controller
             });
         }
 
-        // Ordenar pela chave de partição (criado_em) e paginar
+        // Ordenar primeiro por chamados fixados e depois pela chave de partição (criado_em) e paginar
         $perPage = min((int) $request->input('per_page', 15), 100);
         return response()->json(
-            $query->orderBy('criado_em', 'desc')->paginate($perPage),
+            $query->orderBy('fixada', 'desc')->orderBy('criado_em', 'desc')->paginate($perPage),
             200
         );
     }
@@ -212,6 +212,7 @@ class OrdemServicoController extends Controller
             'prioridade_id' => $request->prioridade_id ?? $prioridadeBaixaId,
             'anexo'         => $caminhoAnexo,
             'ativo'         => true,
+            'fixada'        => false,       
         ]);
 
         $novaOrdem->historicos()->create([
@@ -337,9 +338,9 @@ class OrdemServicoController extends Controller
     public function update(OrdemServicoRequest $request, $id)
     {
         if (\Illuminate\Support\Str::isUuid($id)) {
-            $item = OrdemServico::where('codigo_rastreio', $id)->firstOrFail();
+            $item = OrdemServico::where('codigo_rastreio', $id)->firstOrFail(); //uuid
         } else {
-            $item = OrdemServico::where('id', is_numeric($id) ? $id : 0)->firstOrFail();
+            $item = OrdemServico::where('id', is_numeric($id) ? $id : 0)->firstOrFail(); //id
         }
 
         \Illuminate\Support\Facades\Gate::authorize('update', $item);
@@ -500,7 +501,10 @@ class OrdemServicoController extends Controller
         return response()->json(\App\Models\Prioridade::orderBy('id', 'asc')->get());
     }
 
-    // Ignorado, não adicionei swagger pros helpers (categorias, status, urgencias, prioridades) pois são simples. Vou focar nas actions de comentarios.
+    #[OA\Get(
+        path: "/api/ordens/{id}/comentarios",
+        summary: "Lista Categorias (Ignorar este endpoint, apenas placeholder se houvesse route)"
+    )]
     
     #[OA\Post(
         path: "/api/ordens/{id}/comentarios",
@@ -532,7 +536,7 @@ class OrdemServicoController extends Controller
             new OA\Response(response: 422, description: "Erro de validação")
         ]
     )]
-    public function addComentario(\App\Http\Requests\StoreComentarioRequest $request, $id)
+    public function addComentario(\Illuminate\Http\Request $request, $id)
     {
         if (\Illuminate\Support\Str::isUuid($id)) {
             $ordem = OrdemServico::where('codigo_rastreio', $id)->first();
@@ -545,6 +549,16 @@ class OrdemServicoController extends Controller
         }
 
         $user = $request->user();
+        $userCargo = is_string($user->cargo) ? $user->cargo : ($user->cargo?->nome ?? '');
+
+        // Autorização: Apenas criador da OS, técnico atribuído ou Admin podem comentar
+        if ($userCargo !== 'Admin' && $ordem->usuario_id !== $user->id && $ordem->tecnico_id !== $user->id) {
+            return response()->json(['message' => 'Você não tem permissão para comentar nesta ordem de serviço.'], 403);
+        }
+
+        $request->validate([
+            'conteudo' => 'required|string|max:1000'
+        ]);
 
         $conteudoSeguro = strip_tags($request->conteudo);
 
@@ -619,9 +633,22 @@ class OrdemServicoController extends Controller
             new OA\Response(response: 422, description: "Erro de validação")
         ]
     )]
-    public function updateComentario(\App\Http\Requests\UpdateComentarioRequest $request, $id, $comentarioId)
+    public function updateComentario(\Illuminate\Http\Request $request, $id, $comentarioId)
     {
         $comentario = \App\Models\OrdemServicoComentario::findOrFail($comentarioId);
+        
+        $user = $request->user();
+        $userCargo = is_string($user->cargo) ? $user->cargo : ($user->cargo?->nome ?? '');
+
+        if ($userCargo !== 'Admin' && $comentario->usuario_id !== $user->id) {
+            return response()->json(['message' => 'Você só pode editar seus próprios comentários.'], 403);
+        }
+
+        if ($userCargo !== 'Admin' && $comentario->criado_em && $comentario->criado_em->diffInMinutes(now()) > 5) {
+            return response()->json(['message' => 'O tempo limite de 5 minutos para editar mensagens já expirou.'], 403);
+        }
+
+        $request->validate(['conteudo' => 'required|string|max:1000']);
 
         $conteudoSeguro = strip_tags($request->conteudo);
 
@@ -663,14 +690,19 @@ class OrdemServicoController extends Controller
             new OA\Response(response: 422, description: "Erro de validação")
         ]
     )]
-    public function deleteComentario(\App\Http\Requests\DeleteComentarioRequest $request, $id, $comentarioId)
+    public function deleteComentario(\Illuminate\Http\Request $request, $id, $comentarioId)
     {
         $comentario = \App\Models\OrdemServicoComentario::findOrFail($comentarioId);
         
         $user = $request->user();
+        $userCargo = is_string($user->cargo) ? $user->cargo : ($user->cargo?->nome ?? '');
+
         $tipoExclusao = $request->query('tipo', 'mim'); // 'mim' ou 'todos'
 
         if ($tipoExclusao === 'todos') {
+            if ($userCargo !== 'Admin' && $comentario->usuario_id !== $user->id) {
+                return response()->json(['message' => 'Você não tem permissão para excluir este comentário para todos.'], 403);
+            }
             $comentario->delete();
             return response()->json(['message' => 'Comentário excluído para todos.'], 200);
         } else {
@@ -680,6 +712,26 @@ class OrdemServicoController extends Controller
                 $comentario->update(['excluido_para' => $excluidoPara]);
             }
             return response()->json(['message' => 'Comentário excluído para você.'], 200);
+        }
+    }
+
+    public function fixar($id)
+    {
+        $ordem = OrdemServico::findOrFail($id);
+        \Illuminate\Support\Facades\Gate::authorize('fixar', $ordem);
+
+        $ordem->fixada = !$ordem->fixada;
+        $ordem->save();
+        if ($ordem->fixada) {
+            return response()->json([
+                'message' => 'Ordem de Serviço fixada com sucesso',
+                'fixada' => $ordem->fixada
+            ], 200);
+        } else {
+            return response()->json([
+                'message' => 'Ordem de Serviço desfixada com sucesso',
+                'fixada' => $ordem->fixada
+            ], 200);
         }
     }
 }

@@ -52,6 +52,20 @@ class OrdemServicoRequest extends FormRequest
     ]);
 }
 
+    public function messages(): array
+    {
+        return [
+            'titulo.required' => 'O título do chamado é obrigatório.',
+            'titulo.max' => 'O título não pode ter mais que 120 caracteres.',
+            'descricao.required' => 'A descrição do chamado é obrigatória.',
+            'localizacao.required' => 'A localização é obrigatória.',
+            'anexo.file' => 'O anexo enviado não é um arquivo válido.',
+            'anexo.mimes' => 'O anexo deve ser um arquivo do tipo: pdf, jpeg, jpg, png.',
+            'anexo.max' => 'O arquivo do anexo é grande demais. O limite é 10MB.',
+            'anexo.uploaded' => 'Arquivo grande demais ou corrompido. Tente um arquivo menor.',
+        ];
+    }
+
     protected function prepareForValidation(): void
 {
     $merge = [];

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
+import { Pin } from "lucide-react";
 import api from "./services/api";
 import Paginacao from "./components/Paginacao";
 
@@ -383,6 +384,18 @@ export default function ListaChamados() {
     }
   };
 
+  const fixarChamado = async (id: number) => {
+    if (!confirm("Deseja alterar a fixação desta ordem de serviço?")) return;
+
+    try {
+      const res = await api.post(`/ordens/${id}/fixar`);
+      alert(res.data.message);
+      await buscarChamados();
+    } catch (err) {
+      alert("Erro ao alterar fixação da ordem de serviço.");
+    }
+  };
+
   const recarregarChamado = async (id: number) => {
     try {
       const res = await api.get(`/ordens/${id}`);
@@ -639,6 +652,14 @@ export default function ListaChamados() {
     Acesso: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   };
 
+  const statusCor: any = {
+    "Novo": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    "Em Andamento": "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+    "Aguardando Peça": "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+    "Pausado": "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400",
+    "Fechado": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  };
+
   const slaLabel: any = {
     vencido: "🔴 SLA Vencido",
     alerta: "🟡 SLA em Risco",
@@ -749,6 +770,11 @@ export default function ListaChamados() {
                 >
                   <td className="px-4 py-3 font-bold text-slate-800 dark:text-slate-200 overflow-hidden">
                     <div className="flex items-center gap-2">
+                      {cargo !== "Usuario" && (
+                        <button onClick={() => fixarChamado(os.id)} className={`flex-shrink-0 transition-colors ${os.fixada ? 'text-red-500 hover:text-red-600' : 'text-slate-300 hover:text-slate-400 dark:text-slate-600 dark:hover:text-slate-500'}`} title={os.fixada ? 'Desfixar Chamado' : 'Fixar Chamado'}>
+                          <Pin size={14} className={os.fixada ? "fill-current" : ""} />
+                        </button>
+                      )}
                       <span className="truncate overflow-hidden">{os.titulo}</span>
                       {os.anexo_url && (
                         <button onClick={() => setAnexoPreview({url: os.anexo_url, osId: os.id})} className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-[9px] font-bold uppercase flex-shrink-0 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">📎 Anexo</button>
@@ -767,12 +793,8 @@ export default function ListaChamados() {
                     {os.criado_em ? new Date(os.criado_em).toLocaleDateString("pt-BR") : "-"}
                   </td>
                   <td className="px-4 py-3 text-center overflow-hidden">
-                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase truncate ${(os.status?.nome || os.status) === "Fechado" 
-                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                    }`}
-                    >
-                      {(os.status?.nome || os.status) === "Fechado" ? "Resolvido" : "Em Atendimento"}
+                    <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase truncate ${statusCor[os.status?.nome || os.status] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                      {os.status?.nome || os.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right overflow-hidden">
@@ -824,6 +846,11 @@ export default function ListaChamados() {
                     <td className="px-2 py-3 font-mono text-blue-600 dark:text-blue-400 truncate overflow-hidden">#{os.id}</td>
                     <td className="px-2 py-3 font-bold text-slate-800 dark:text-slate-200 overflow-hidden">
                       <div className="flex items-center gap-2">
+                        {cargo !== "Usuario" && (
+                          <button onClick={() => fixarChamado(os.id)} className={`flex-shrink-0 transition-colors ${os.fixada ? 'text-red-500 hover:text-red-600' : 'text-slate-300 hover:text-slate-400 dark:text-slate-600 dark:hover:text-slate-500'}`} title={os.fixada ? 'Desfixar Chamado' : 'Fixar Chamado'}>
+                            <Pin size={14} className={os.fixada ? "fill-current" : ""} />
+                          </button>
+                        )}
                         <span className="truncate overflow-hidden">{os.titulo}</span>
                         {os.anexo_url && (
                           <button onClick={() => setAnexoPreview({url: os.anexo_url, osId: os.id})} className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-[9px] font-bold uppercase flex-shrink-0 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">📎 Anexo</button>
@@ -985,11 +1012,8 @@ export default function ListaChamados() {
 
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Situação</span>
-                      <span className={`inline-block px-2 py-0.5 rounded-lg text-[9px] font-black uppercase mt-1 ${(chamadoSelecionado.status?.nome || chamadoSelecionado.status) === "Fechado"
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                      }`}>
-                        {(chamadoSelecionado.status?.nome || chamadoSelecionado.status) === "Fechado" ? "Resolvido" : "Em Atendimento"}
+                      <span className={`inline-block px-2 py-0.5 rounded-lg text-[9px] font-black uppercase mt-1 ${statusCor[chamadoSelecionado.status?.nome || chamadoSelecionado.status] || "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
+                        {chamadoSelecionado.status?.nome || chamadoSelecionado.status}
                       </span>
                     </div>
 

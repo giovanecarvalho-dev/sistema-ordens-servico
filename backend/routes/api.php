@@ -32,7 +32,7 @@ Route::get('/health', function () {
 });
 
 Route::post('/usuarios', [UsuarioController::class, 'store']);
-Route::post('/login', [UsuarioController::class, 'login']);
+Route::middleware('throttle:5,1')->post('/login', [UsuarioController::class, 'login']);
 
 
 //protegidos
@@ -69,6 +69,7 @@ Route::middleware(['auth:api', 'validate-jti'])->group(function () {
     //tecnicos e admin
     Route::middleware('cargo:Tecnico,Admin')->group(function () {
         Route::put('/ordens/{id}', [OrdemServicoController::class, 'update']);
+        Route::post('/ordens/{id}/fixar', [OrdemServicoController::class, 'fixar']);
     });
 
     //apenas administradores

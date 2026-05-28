@@ -76,4 +76,12 @@ class OrdemServicoPolicy
     {
         return $user->temPermissao('os.deletar');
     }
+
+    /**
+     * Determina se o usuário pode fixar uma OS.
+     */
+    public function fixar(User $user, OrdemServico $os): bool
+    {
+        return $user->cargo?->nome === 'Admin' || $user->cargo?->nome === 'Tecnico';
+    }
 }

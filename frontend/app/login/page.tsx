@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '../services/api';
 
@@ -10,9 +10,24 @@ export default function Login() {
   const [cpf, setCpf] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [erroVisual, setErroVisual] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tempoBloqueio, setTempoBloqueio] = useState(0);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (tempoBloqueio > 0) {
+      interval = setInterval(() => {
+        setTempoBloqueio((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [tempoBloqueio]);
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    setErroVisual('');
+    setIsSubmitting(true);
     try {
       if (isCadastro) {
         await api.post('/usuarios', { nome, cpf, email, senha });
@@ -41,8 +56,14 @@ if (resposta.status === 200) {
     }
 }
       }
-    } catch (err) {
-      alert(isCadastro ? "Erro ao criar conta." : "Credenciais inválidas.");
+    } catch (err: any) {
+      if (err.response?.status === 429) {
+        setTempoBloqueio(60);
+      } else {
+        setErroVisual(isCadastro ? "Erro ao criar conta. Verifique os dados." : "Credenciais inválidas. Tente novamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -60,6 +81,12 @@ if (resposta.status === 200) {
             {isCadastro ? 'Crie sua credencial de acesso' : 'Identifique-se para continuar'}
           </p>
         </div>
+
+        {erroVisual && (
+          <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-medium text-center animate-in fade-in zoom-in duration-200">
+            {erroVisual}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {isCadastro && (
@@ -102,8 +129,12 @@ if (resposta.status === 200) {
             />
           </div>
 
-          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg uppercase text-xs tracking-widest mt-4 cursor-pointer">
-            {isCadastro ? 'Cadastrar' : 'Entrar no Sistema'}
+          <button 
+            type="submit" 
+            disabled={isSubmitting || tempoBloqueio > 0}
+            className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg uppercase text-xs tracking-widest mt-4 transition-all ${(isSubmitting || tempoBloqueio > 0) ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            {tempoBloqueio > 0 ? `Aguarde ${tempoBloqueio}s...` : (isSubmitting ? 'Aguarde...' : (isCadastro ? 'Cadastrar' : 'Entrar no Sistema'))}
           </button>
         </form>
 

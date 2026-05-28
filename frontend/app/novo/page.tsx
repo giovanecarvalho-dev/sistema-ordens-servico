@@ -75,8 +75,17 @@ export default function NovoChamado() {
 
       setSucesso(true);
     } catch (err: any) {
-      console.error(err.response?.data);
-      alert("Falha ao registrar chamado: " + (err.response?.data?.error || "Verifique os dados"));
+      let errorMessage = "Verifique os dados";
+      if (err.response?.data?.errors) {
+        const firstErrorKey = Object.keys(err.response.data.errors)[0];
+        errorMessage = err.response.data.errors[firstErrorKey][0];
+      } else if (err.response?.data?.message && err.response?.data?.message !== "The given data was invalid.") {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      }
+      
+      alert("Falha ao registrar chamado:\n" + errorMessage);
     } finally {
       setIsSubmitting(false);
     }
