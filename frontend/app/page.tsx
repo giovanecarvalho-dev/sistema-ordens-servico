@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Pin } from "lucide-react";
 import api from "./services/api";
 import Paginacao from "./components/Paginacao";
@@ -156,7 +157,16 @@ export default function ListaChamados() {
   const [novoComentario, setNovoComentario] = useState("");
   const inputComentarioRef = useRef<HTMLInputElement>(null);
 
-
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setChamadoSelecionado(null);
+        setAnexoPreview(null);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
   const [enviandoComentario, setEnviandoComentario] = useState(false);
   const [comentarioEditandoId, setComentarioEditandoId] = useState<number | null>(null);
   const [comentarioEditandoConteudo, setComentarioEditandoConteudo] = useState("");
@@ -338,6 +348,19 @@ export default function ListaChamados() {
     return () => clearTimeout(delayDebounceFn);
   }, [filtros, buscarChamados]);
 
+  // Detecta o query param ?abrirChamado=ID vindo das notificações
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  useEffect(() => {
+    const chamadoId = searchParams.get('abrirChamado');
+    if (chamadoId) {
+      // Limpa o query param da URL para não reabrir ao navegar
+      router.replace('/', { scroll: false });
+      // Abre o modal do chamado correspondente
+      abrirModalEdicao({ id: Number(chamadoId) });
+    }
+  }, [searchParams]);
+
   // Reflete apenas o que o back enviou
   const statusSla = (os: any) => {
     const statusNome = os.status?.nome || os.status;
@@ -515,8 +538,6 @@ export default function ListaChamados() {
         chamadoSelecionado.comentarios.map((c: any) => {
           const isMe = String(c.usuario_id) === String(meuUsuarioId);
           const isEditing = comentarioEditandoId === c.id;
-          const editTimeExpired = new Date().getTime() - new Date(c.criado_em).getTime() > 5 * 60 * 1000;
-          const canEdit = isMe && (cargo === "Admin" || !editTimeExpired);
 
           return (
             <div key={c.id} className={`flex flex-col max-w-[85%] ${isMe ? "ml-auto items-end" : "mr-auto items-start"}`}>
@@ -556,9 +577,9 @@ export default function ListaChamados() {
                       <button onClick={() => setComentarioRespondendo(c)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400 hover:text-green-500 transition-colors" title="Responder">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
                       </button>
-                      {(isMe || cargo === "Admin") && (
+                      {c.pode_deletar && (
                         <>
-                          {canEdit && (
+                          {c.pode_editar && (
                             <button onClick={() => { setComentarioEditandoId(c.id); setComentarioEditandoConteudo(c.conteudo); }} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400 hover:text-blue-500 transition-colors" title="Editar">
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                             </button>
@@ -982,8 +1003,8 @@ export default function ListaChamados() {
 
       {/* MODAL DE EDIÇÃO E DETALHES */}
       {chamadoSelecionado && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-2xl p-5 md:p-6 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-y-auto max-h-[95vh] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setChamadoSelecionado(null)}>
+          <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-2xl p-5 md:p-6 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-y-auto max-h-[95vh] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-black mb-2 text-slate-800 dark:text-white">
               {cargo === "Usuario" ? "Acompanhamento do Chamado" : `Detalhes e Edição do Chamado #${chamadoSelecionado.id}`}
             </h3>

@@ -278,11 +278,25 @@ class OrdemServicoController extends Controller
         \Illuminate\Support\Facades\Gate::authorize('view', $ordem);
 
         $user = request()->user();
+        $userCargo = is_string($user->cargo) ? $user->cargo : ($user->cargo?->nome ?? '');
+
         if ($ordem->relationLoaded('comentarios')) {
-            $ordem->setRelation('comentarios', $ordem->comentarios->filter(function($c) use ($user) {
+            // Filtra comentários excluídos para o usuário atual
+            $comentariosFiltrados = $ordem->comentarios->filter(function($c) use ($user) {
                 $excluidoPara = $c->excluido_para ?? [];
                 return !in_array($user->id, $excluidoPara);
-            })->values());
+            })->values();
+
+            // Adiciona flags de permissão calculadas pelo backend
+            $comentariosFiltrados->each(function($c) use ($user, $userCargo) {
+                $isAutor = $c->usuario_id === $user->id;
+                $tempoExpirado = $c->criado_em ? $c->criado_em->diffInMinutes(now()) > 5 : true;
+
+                $c->pode_editar = $isAutor && ($userCargo === 'Admin' || !$tempoExpirado);
+                $c->pode_deletar = $isAutor || $userCargo === 'Admin';
+            });
+
+            $ordem->setRelation('comentarios', $comentariosFiltrados);
         }
 
         return response()->json($ordem, 200);

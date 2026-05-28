@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ClipboardList, UserPlus, Users, BarChart3, Settings, LogOut, Sun, Moon, ChevronLeft, Menu, Bell } from 'lucide-react';
@@ -13,8 +13,36 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [notificacoes, setNotificacoes] = useState<any[]>([]);
   const [showNotificacoes, setShowNotificacoes] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        const target = event.target as Element;
+        // Não fecha se o clique foi no próprio botão de abrir notificações
+        if (!target.closest('#btn-notificacoes')) {
+          setShowNotificacoes(false);
+        }
+      }
+    }
+    
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setShowNotificacoes(false);
+      }
+    }
+
+    if (showNotificacoes) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showNotificacoes]);
 
   const fetchNotificacoes = () => {
     if (pathname === '/login') return;
@@ -159,6 +187,7 @@ export default function Sidebar() {
               <div className="flex items-center gap-1 flex-shrink-0 relative">
                 {/* Botão de Notificações */}
                 <button 
+                  id="btn-notificacoes"
                   onClick={() => setShowNotificacoes(!showNotificacoes)} 
                   className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative text-slate-500 hover:text-blue-600 dark:hover:text-blue-400" 
                   title="Notificações"
@@ -187,6 +216,7 @@ export default function Sidebar() {
               <Menu size={20} />
             </button>
             <button 
+              id="btn-notificacoes"
               onClick={() => setShowNotificacoes(!showNotificacoes)} 
               className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative text-slate-500 hover:text-blue-600 dark:hover:text-blue-400" 
               title="Notificações"
@@ -205,7 +235,7 @@ export default function Sidebar() {
 
       {/* Popover de Notificações */}
       {showNotificacoes && (
-        <div className="absolute left-full top-16 ml-2 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 flex flex-col max-h-96 overflow-hidden animate-in fade-in slide-in-from-left-2 duration-200">
+        <div ref={popoverRef} className="absolute left-full top-16 ml-2 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-50 flex flex-col max-h-96 overflow-hidden animate-in fade-in slide-in-from-left-2 duration-200">
           <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
             <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
               Notificações {unreadCount > 0 && `(${unreadCount})`}
@@ -228,7 +258,13 @@ export default function Sidebar() {
               notificacoes.map((n: any) => (
                 <div 
                   key={n.id} 
-                  onClick={() => !n.lida && marcarComoLida(n.id)}
+                  onClick={async () => {
+                    if (!n.lida) await marcarComoLida(n.id);
+                    setShowNotificacoes(false);
+                    if (n.ordem_servico_id) {
+                      router.push(`/?abrirChamado=${n.ordem_servico_id}`);
+                    }
+                  }}
                   className={`p-4 transition-colors cursor-pointer text-left ${
                     !n.lida 
                       ? 'bg-blue-50/30 dark:bg-blue-900/5 hover:bg-blue-50/50 dark:hover:bg-blue-900/10' 
