@@ -171,17 +171,22 @@ export default function ListaChamados() {
         setNavMode(false);
       }
 
-      if (!navMode && (event.key === 'm' || event.key === 'M') && !chamadoSelecionado && !anexoPreview) {
-        setNavMode(true);
-        setNavIndex(0);
+      if ((event.key === 'm' || event.key === 'M') && !chamadoSelecionado && !anexoPreview) {
+        if (navMode) {
+          setNavMode(false);
+        } else {
+          setNavMode(true);
+          setNavIndex(0);
+        }
         event.preventDefault();
+        return;
       }
 
       if (navMode && !chamadoSelecionado && !anexoPreview) {
-        if (event.key === 'ArrowDown' || event.key === 'j') {
+        if (event.key === 'ArrowDown' || event.key === 's' || event.key === 'S') {
           setNavIndex((prev) => Math.min(prev + 1, ordens.length - 1));
           event.preventDefault();
-        } else if (event.key === 'ArrowUp' || event.key === 'k') {
+        } else if (event.key === 'ArrowUp' || event.key === 'w' || event.key === 'W') {
           setNavIndex((prev) => Math.max(prev - 1, 0));
           event.preventDefault();
         } else if (event.key === 'Enter') {
@@ -1338,7 +1343,7 @@ export default function ListaChamados() {
           <span className="flex items-center justify-center w-6 h-6 bg-slate-700 rounded text-xs font-black">M</span>
           <span className="text-xs font-bold tracking-widest uppercase text-blue-400">Modo Navegação</span>
           <div className="h-4 w-px bg-slate-700 mx-1"></div>
-          <span className="text-[10px] text-slate-300 uppercase tracking-widest font-bold">Use <kbd className="font-mono text-white ml-1">↑</kbd> <kbd className="font-mono text-white mr-1">↓</kbd> / <kbd className="font-mono text-white ml-1">J</kbd> <kbd className="font-mono text-white mr-1">K</kbd> e <kbd className="font-mono text-white mx-1">ENTER</kbd> para abrir. <kbd className="font-mono text-white ml-1">ESC</kbd> para sair.</span>
+          <span className="text-[10px] text-slate-300 uppercase tracking-widest font-bold">Use <kbd className="font-mono text-white ml-1">↑</kbd> <kbd className="font-mono text-white mr-1">↓</kbd> / <kbd className="font-mono text-white ml-1">W</kbd> <kbd className="font-mono text-white mr-1">S</kbd> e <kbd className="font-mono text-white mx-1">ENTER</kbd> para abrir. <kbd className="font-mono text-white ml-1">ESC</kbd> para sair.</span>
         </div>
       )}
     </>
