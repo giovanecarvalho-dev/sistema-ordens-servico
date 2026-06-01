@@ -1,10 +1,10 @@
 FROM php:8.4-fpm
 
 # Instala dependências do sistema e PostgreSQL
-RUN apt-get update && apt-get install -y libpq-dev zip unzip git curl netcat-openbsd
+RUN apt-get update && apt-get install -y libpq-dev postgresql-client zip unzip git curl netcat-openbsd libzip-dev
 
 # Extensões PHP necessárias
-RUN docker-php-ext-install pdo pdo_pgsql
+RUN docker-php-ext-install pdo pdo_pgsql zip
 
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

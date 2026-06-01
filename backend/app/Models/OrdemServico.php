@@ -33,6 +33,7 @@ class OrdemServico extends Model
         'tempo_pausado_minutos',
         'codigo_rastreio', 
         'anexo',
+        'fixada',
     ];
 
     protected $appends = [

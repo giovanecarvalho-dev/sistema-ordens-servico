@@ -23,23 +23,17 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response && error.response.status === 401) {
-      // O código 401 significa que o JWT expirou ou é inválido
-      
-      // Se o erro 401 for na rota de login, não mostramos "sessão expirada", 
-      // pois é apenas uma tentativa de login inválida.
+
       if (error.config.url?.includes('/login')) {
         return Promise.reject(error);
       }
-      
-      //Limpa tudo que é velho no navegador
+
       sessionStorage.removeItem('token');
       sessionStorage.removeItem('usuarioId');
       sessionStorage.removeItem('usuarioCargo');
-      
+
       alert("Sua sessão expirou. Por segurança, por favor, faça login novamente para continuar.");
 
-      // Chuta o usuário de volta para o login
-      // Usamos window.location porque aqui estamos fora de um componente React
       window.location.href = '/login';
     }
 

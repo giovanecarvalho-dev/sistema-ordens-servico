@@ -91,8 +91,8 @@ class UsuarioController extends Controller
 {
     $query = User::with('cargo');
 
-    // Contagem de ordens ativas baseada no relacionamento status
-    $query->withCount(['ordensSolicitadas as ordens_ativas' => function ($q) {
+    // Contagem de ordens ativas baseada no relacionamento status (ordens onde o usuário é o técnico)
+    $query->withCount(['ordensTecnico as ordens_ativas' => function ($q) {
         $q->whereHas('status', function($sq) {
             $sq->where('nome', '!=', 'Fechado');
         });

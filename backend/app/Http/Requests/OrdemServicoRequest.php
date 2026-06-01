@@ -49,6 +49,7 @@ class OrdemServicoRequest extends FormRequest
         'motivo_pausa'  => ['sometimes', 'nullable', 'string', 'max:150'],
         'solucao'       => ['sometimes', 'nullable', 'string'],
         'anexo'         => ['sometimes', 'nullable', 'file', 'mimes:pdf,jpeg,jpg,png', 'max:10240'],
+        'fixada'        => ['sometimes', 'boolean'],
     ]);
 }
 
@@ -63,6 +64,7 @@ class OrdemServicoRequest extends FormRequest
             'anexo.mimes' => 'O anexo deve ser um arquivo do tipo: pdf, jpeg, jpg, png.',
             'anexo.max' => 'O arquivo do anexo é grande demais. O limite é 10MB.',
             'anexo.uploaded' => 'Arquivo grande demais ou corrompido. Tente um arquivo menor.',
+            'fixada.boolean' => 'O campo fixada deve ser verdadeiro ou falso.',
         ];
     }
 

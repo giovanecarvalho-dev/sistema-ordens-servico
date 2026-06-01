@@ -14,7 +14,9 @@
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
-        "php-open-source-saver/jwt-auth": "*"
+        "masbug/flysystem-google-drive-ext": "*",
+        "php-open-source-saver/jwt-auth": "*",
+        "spatie/laravel-backup": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

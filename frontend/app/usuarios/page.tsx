@@ -10,11 +10,13 @@ export default function UsuariosPage() {
     const [totalPaginas, setTotalPaginas] = useState(1);
     const [filtroId, setFiltroId] = useState('');
     const [itensPorPagina, setItensPorPagina] = useState(15);
+    const [carregando, setCarregando] = useState(true);
 
     const meuId = typeof window !== 'undefined' ? sessionStorage.getItem('usuarioId') : null;
 
     // Busca os dados da API já filtrados, paginados e calculados pelo back-end!
     const buscarUsuarios = () => {
+        setCarregando(true);
         const params = new URLSearchParams({ page: paginaAtual.toString(), per_page: itensPorPagina.toString() });
         if (filtroId) params.append('id', filtroId);
 
@@ -24,7 +26,8 @@ export default function UsuariosPage() {
                 setUsuarios(res.data.data || []);
                 setTotalPaginas(res.data.last_page || 1);
             })
-            .catch((err) => console.error("Erro ao carregar dados:", err));
+            .catch((err) => console.error("Erro ao carregar dados:", err))
+            .finally(() => setCarregando(false));
     };
 
     // Recarrega sempre que a página ou a quantidade por página mudar
@@ -118,7 +121,24 @@ export default function UsuariosPage() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {usuarios.map((user: any) => {
+                        {carregando && (
+                            <tr>
+                                <td colSpan={6} className="px-3 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                        <span>Carregando usuários...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        )}
+                        {!carregando && usuarios.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="px-3 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
+                                    Nenhum usuário encontrado.
+                                </td>
+                            </tr>
+                        )}
+                        {!carregando && usuarios.map((user: any) => {
                             const ehEuMesmo = String(user.id) === String(meuId);
                             // Agora lê direto da propriedade mágica do Laravel!
                             const ordensAtivas = user.ordens_ativas || 0;

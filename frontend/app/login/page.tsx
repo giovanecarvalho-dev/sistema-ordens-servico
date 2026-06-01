@@ -14,15 +14,14 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tempoBloqueio, setTempoBloqueio] = useState(0);
 
+  // Inicia a contagem regressiva usando o tempo de espera informado pelo servidor usando o retry-after
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (tempoBloqueio > 0) {
-      interval = setInterval(() => {
-        setTempoBloqueio((prev) => prev - 1);
-      }, 1000);
-    }
+    if (tempoBloqueio <= 0) return;
+    const interval = setInterval(() => {
+      setTempoBloqueio((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
     return () => clearInterval(interval);
-  }, [tempoBloqueio]);
+  }, [tempoBloqueio > 0]);
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
@@ -58,7 +57,11 @@ if (resposta.status === 200) {
       }
     } catch (err: any) {
       if (err.response?.status === 429) {
-        setTempoBloqueio(60);
+        // Aguarda exatamente o tempo informado pelo servidor antes de permitir uma nova tentativa
+        const retryAfter = err.response.headers['retry-after'];
+        const segundos = retryAfter ? parseInt(retryAfter) : 60;
+        setTempoBloqueio(segundos);
+        setErroVisual('');
       } else {
         setErroVisual(isCadastro ? "Erro ao criar conta. Verifique os dados." : "Credenciais inválidas. Tente novamente.");
       }
@@ -82,7 +85,14 @@ if (resposta.status === 200) {
           </p>
         </div>
 
-        {erroVisual && (
+        {tempoBloqueio > 0 && (
+          <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 text-xs font-medium text-center animate-in fade-in zoom-in duration-200">
+            <div className="text-sm font-bold mb-1">⚠️ Muitas tentativas incorretas</div>
+            <div>Você errou a senha 5 vezes. Tente novamente em <span className="font-black">{tempoBloqueio}s</span>.</div>
+          </div>
+        )}
+
+        {erroVisual && tempoBloqueio === 0 && (
           <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-medium text-center animate-in fade-in zoom-in duration-200">
             {erroVisual}
           </div>

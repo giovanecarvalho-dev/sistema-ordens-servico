@@ -810,14 +810,24 @@ export default function ListaChamados() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {ordensExibicao.length === 0 && (
+              {carregando && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Carregando chamados...</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {!carregando && ordensExibicao.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
                     Você ainda não abriu nenhum chamado.
                   </td>
                 </tr>
               )}
-              {ordensExibicao.map((os: any, index: number) => (
+              {!carregando && ordensExibicao.map((os: any, index: number) => (
                 <tr
                   key={os.id}
                   className={`transition-colors ${navMode && navIndex === index ? 'bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-500 ring-inset cursor-pointer' : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'}`}
@@ -883,14 +893,24 @@ export default function ListaChamados() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {ordensExibicao.length === 0 && (
+              {carregando && (
+                <tr>
+                  <td colSpan={14} className="px-6 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Carregando chamados...</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {!carregando && ordensExibicao.length === 0 && (
                 <tr>
                   <td colSpan={14} className="px-6 py-10 text-center text-slate-400 dark:text-slate-600 italic text-sm">
                     Nenhum chamado encontrado.
                   </td>
                 </tr>
               )}
-              {ordensExibicao.map((os: any, index: number) => {
+              {!carregando && ordensExibicao.map((os: any, index: number) => {
                 const slaStatus = statusSla(os);
                 return (
                   <tr
